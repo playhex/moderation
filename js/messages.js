@@ -1,6 +1,7 @@
 import { state, api } from './api.js';
 import { esc, relativeTime } from './utils.js';
 import { updateNav, pageNav } from './nav.js';
+import { highlightBadWords } from './badwords.js';
 
 export async function renderMessages() {
   updateNav();
@@ -59,7 +60,7 @@ function renderTable(msgs) {
     const isDifferentGameThanPrevious = i > 0 && array[i - 1].hostedGame.publicId !== m.hostedGame.publicId;
 
     return `<li class="${isDifferentGameThanPrevious ? 'mt-3' : ''}">
-      <span class="${contentClass}">${gamePrefix}${author} ${esc(m.content)}</span>
+      <span class="${contentClass}">${gamePrefix}${author} ${highlightBadWords(esc(m.content))}</span>
       <span class="text-muted small ms-1">(${relativeTime(m.createdAt)})</span>${actionLink}
     </li>`;
   }).join('');
