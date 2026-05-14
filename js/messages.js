@@ -17,6 +17,7 @@ export async function renderMessages() {
     </div>`;
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
+    state.messages = null;
     document.getElementById('msg-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadMessages();
@@ -28,12 +29,17 @@ export async function renderMessages() {
 async function loadMessages() {
   try {
     const msgs = state.messages ?? await api('GET', '/api/admin/moderation/chat-messages');
-    state.messages = null;
+    state.messages = msgs;
     renderTable(msgs);
   } catch (e) {
     document.getElementById('msg-body').innerHTML =
       `<div class="alert alert-danger">${esc(e.message)}</div>`;
   }
+}
+
+function sourceKey(entry) {
+  if (entry.source === 'game') return `game:${entry.data.publicId}`;
+  return `channel:${entry.data}`;
 }
 
 function renderTable(msgs) {
@@ -42,10 +48,26 @@ function renderTable(msgs) {
     return;
   }
 
-  const items = msgs.map((m, i, array) => {
-    const gamePrefix = m.hostedGame
-      ? `(<a href="${esc(state.apiBase)}/games/${esc(m.hostedGame.publicId)}" target="_blank" class="text-decoration-none">Game ${esc(m.hostedGame.publicId.slice(0, 4))}</a>) `
-      : '';
+  const items = msgs.map((entry, i, array) => {
+    const m = entry.message;
+
+    let sourcePrefix;
+    if (entry.source === 'game') {
+      const { opponentType } = entry.data;
+      let gameType = '';
+
+      if (opponentType === 'ai') {
+        gameType = 'Bot game '
+      } else if (opponentType === 'player') {
+        gameType = 'Game'
+      } else {
+        gameType = opponentType
+      }
+
+      sourcePrefix = `(<a href="${esc(state.apiBase)}/games/${esc(entry.data.publicId)}" target="_blank" class="text-decoration-none">${gameType} ${esc(entry.data.publicId.slice(0, 4))}</a>) `;
+    } else {
+      sourcePrefix = `(#${esc(entry.data)}) `;
+    }
 
     const author = m.player
       ? `<span class="font-monospace text-muted small me-1">${m.player.isGuest ? '<i>Guest</i>' : ''} ${esc(m.player.pseudo)}:</span>`
@@ -57,10 +79,10 @@ function renderTable(msgs) {
       ? ` <a class="text-warning text-decoration-none small" href="#/action?player=${esc(m.player.publicId)}&message=${esc(m.publicId)}">Take action</a>`
       : '';
 
-    const isDifferentGameThanPrevious = i > 0 && array[i - 1].hostedGame.publicId !== m.hostedGame.publicId;
+    const isDifferentSourceThanPrevious = i > 0 && sourceKey(array[i - 1]) !== sourceKey(entry);
 
-    return `<li class="${isDifferentGameThanPrevious ? 'mt-3' : ''}">
-      <span class="${contentClass}">${gamePrefix}${author} ${highlightBadWords(esc(m.content))}</span>
+    return `<li class="${isDifferentSourceThanPrevious ? 'mt-3' : ''}">
+      <span class="${contentClass}">${sourcePrefix}${author} ${highlightBadWords(esc(m.content))}</span>
       <span class="text-muted small ms-1">(${relativeTime(m.createdAt)})</span>${actionLink}
     </li>`;
   }).join('');

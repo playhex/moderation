@@ -4,7 +4,7 @@ List last chat messages and nicknames, take moderation action to moderate a chat
 
 ## Install
 
-- Serve `index.html` with a local server (e.g `http://localhost:3001`)
+- Serve `index.html` with a local server (e.g by doing `python3 -m http.server 3001`, then go to `http://localhost:3001`)
 - In your playhex `.env`, allow cors by adding moderation app url, and add a moderator password (admin password works too):
 
 ```

@@ -27,7 +27,7 @@ export async function renderAction(params) {
         : api('GET', '/api/admin/moderation/chat-messages').then(m => { state.messages = m; return m; }),
     ]);
 
-    const playerMessages = allMessages.filter(m => m.player?.publicId === playerPublicId);
+    const playerMessages = allMessages.filter(entry => entry.message.player?.publicId === playerPublicId);
     renderForm(player, pastActions, playerMessages, fromMessageId);
   } catch (e) {
     document.getElementById('action-body').innerHTML =
@@ -82,15 +82,19 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
         `<option value="${esc(value)}">${esc(label)}</option>`
       ).join('');
 
-  const messageRows = playerMessages.map(m => {
+  const messageRows = playerMessages.map(entry => {
+    const m = entry.message;
     const checked = m.publicId === fromMessageId ? 'checked' : '';
     const contentClass = m.deletedByModeration ? 'text-break text-decoration-line-through opacity-50' : 'text-break';
-    const gameLink = m.hostedGame
-      ? `<a href="${esc(state.apiBase)}/games/${esc(m.hostedGame.publicId)}" target="_blank">${esc(m.hostedGame.publicId.slice(0, 8))}…</a>`
-      : '—';
+    let sourceCell;
+    if (entry.source === 'game') {
+      sourceCell = `<a href="${esc(state.apiBase)}/games/${esc(entry.data.publicId)}" target="_blank">${esc(entry.data.publicId.slice(0, 8))}…</a>`;
+    } else {
+      sourceCell = `#${esc(entry.data)}`;
+    }
     return `<tr>
       <td class="text-center"><input class="form-check-input msg-checkbox" type="checkbox" value="${esc(m.publicId)}" ${checked}></td>
-      <td>${gameLink}</td>
+      <td>${sourceCell}</td>
       <td class="${contentClass}">${esc(m.content)}</td>
       <td class="text-muted small text-nowrap" title="${esc(m.createdAt)}">${relativeTime(m.createdAt)}</td>
     </tr>`;
