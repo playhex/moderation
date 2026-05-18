@@ -10,17 +10,26 @@ export const BAD_WORDS = [
   'chink', 'gook', 'wetback',
   // Threats / toxic
   'kill', 'die', 'cancer', 'kys', 'rape', 'toxic',
+  // Hate speech
+  'hail', 'hitler', 'jews',
 ];
 
-const pattern = new RegExp(
-  `(${BAD_WORDS.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+const createRegex = (badWords) => new RegExp(
+  `\\b(${badWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`,
   'gi',
 );
+
+const defaultRegex = createRegex(BAD_WORDS);
 
 /**
  * Returns an HTML string with bad-word matches wrapped in <u class="text-warning">.
  * Input must already be HTML-escaped.
  */
-export function highlightBadWords(escapedText) {
-  return escapedText.replace(pattern, '<u class="text-danger fw-bold">$1</u>');
+export function highlightBadWords(escapedText, badWords) {
+  let regex = badWords
+    ? createRegex(badWords)
+    : defaultRegex
+  ;
+
+  return escapedText.replace(regex, '<u class="text-danger fw-bold">$1</u>');
 }
