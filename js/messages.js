@@ -1,6 +1,7 @@
 import { state, api } from './api.js';
-import { esc, relativeTime } from './utils.js';
+import { esc, relativeTime, getLastRead, setLastRead, setTabCount } from './utils.js';
 import { updateNav, pageNav } from './nav.js';
+import { refreshAllCounts } from './counts.js';
 import { highlightBadWords } from './badwords.js';
 
 export async function renderMessages() {
@@ -9,7 +10,10 @@ export async function renderMessages() {
   pageNav('messages');
   document.getElementById('app').innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4 class="mb-0">Recent chat messages</h4>
+      <div class="d-flex align-items-center gap-3">
+        <h4 class="mb-0">Recent chat messages</h4>
+        <button id="btn-mark-read" class="d-none btn btn-sm btn-success">Mark all read</button>
+      </div>
       <button id="btn-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
     </div>
     <div id="msg-body">
@@ -18,9 +22,17 @@ export async function renderMessages() {
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
     state.messages = null;
+    state.players = null;
+    state.avatars = null;
     document.getElementById('msg-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadMessages();
+    refreshAllCounts('messages');
+  });
+
+  document.getElementById('btn-mark-read').addEventListener('click', () => {
+    setLastRead('messages');
+    renderTable(state.messages);
   });
 
   await loadMessages();
@@ -37,6 +49,7 @@ async function loadMessages() {
   }
 }
 
+
 function sourceKey(entry) {
   if (entry.source === 'game') return `game:${entry.data.publicId}`;
   return `channel:${entry.data}`;
@@ -47,6 +60,18 @@ function renderTable(msgs) {
     document.getElementById('msg-body').innerHTML = '<p class="text-muted">No messages.</p>';
     return;
   }
+
+  const lastRead = getLastRead('messages');
+  const newCount = lastRead
+    ? msgs.filter(e => new Date(e.message.createdAt) > lastRead).length
+    : msgs.length;
+
+  setTabCount('messages', newCount);
+  pageNav('messages');
+  const btn = document.getElementById('btn-mark-read');
+  if (btn) btn.classList.toggle('d-none', newCount === 0);
+
+  let separatorAdded = false;
 
   const items = msgs.map((entry, i, array) => {
     const m = entry.message;
@@ -81,7 +106,16 @@ function renderTable(msgs) {
 
     const isDifferentSourceThanPrevious = i > 0 && sourceKey(array[i - 1]) !== sourceKey(entry);
 
-    return `<li class="${isDifferentSourceThanPrevious ? 'mt-3' : ''}">
+    const isOld = lastRead && new Date(m.createdAt) <= lastRead;
+    const isSeparator = isOld && !separatorAdded && newCount > 0;
+    if (isSeparator) separatorAdded = true;
+
+    const extraClass = [
+      isDifferentSourceThanPrevious ? 'mt-3' : '',
+      isSeparator ? 'unread-separator' : '',
+    ].filter(Boolean).join(' ');
+
+    return `<li class="${extraClass}">
       <span class="${contentClass}">${sourcePrefix}${author} ${highlightBadWords(esc(m.content))}</span>
       <span class="text-muted small ms-1">(${relativeTime(m.createdAt)})</span>${actionLink}
     </li>`;

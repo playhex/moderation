@@ -26,6 +26,7 @@ export function esc(str) {
 /** Keys are playhex translation keys, values are English labels. */
 export const REASONS = {
   'moderation_reason.chat_insults': 'Insults or inappropriate behavior in chat',
+  'moderation_reason.avatar_inappropriate': 'Inappropriate avatar image',
 };
 
 export function getRoute() {
@@ -36,4 +37,22 @@ export function getRoute() {
 
 export function navigate(path) {
   location.hash = '/' + path;
+}
+
+export function getLastRead(tab) {
+  const v = localStorage.getItem(`lastRead:${tab}`);
+  return v ? new Date(v) : null;
+}
+
+export function setLastRead(tab) {
+  localStorage.setItem(`lastRead:${tab}`, new Date().toISOString());
+}
+
+export function getTabCount(tab) {
+  const v = localStorage.getItem(`tabCount:${tab}`);
+  return v !== null ? parseInt(v, 10) : null;
+}
+
+export function setTabCount(tab, count) {
+  localStorage.setItem(`tabCount:${tab}`, String(count));
 }

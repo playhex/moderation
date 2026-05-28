@@ -43,12 +43,20 @@ function renderPastActions(actions) {
   const now = new Date();
 
   return actions.map(a => {
-    const isActive = a.chatBlockedUntil && new Date(a.chatBlockedUntil) > now;
-    const badge = a.chatBlockedUntil
-      ? (isActive
-          ? `<span class="badge text-bg-danger">Chat blocked until ${formatDate(a.chatBlockedUntil)}</span>`
-          : `<span class="badge text-bg-danger">Chat blocked (expired ${formatDate(a.chatBlockedUntil)})</span>`)
-      : `<span class="badge text-bg-warning text-dark">Warning</span>`;
+    const chatActive = a.chatBlockedUntil && new Date(a.chatBlockedUntil) > now;
+    const avatarActive = a.avatarBlockedUntil && new Date(a.avatarBlockedUntil) > now;
+    const badges = [];
+    if (a.chatBlockedUntil) {
+      badges.push(chatActive
+        ? `<span class="badge text-bg-danger">Chat blocked until ${formatDate(a.chatBlockedUntil)}</span>`
+        : `<span class="badge text-bg-secondary">Chat blocked (expired ${formatDate(a.chatBlockedUntil)})</span>`);
+    }
+    if (a.avatarBlockedUntil) {
+      badges.push(avatarActive
+        ? `<span class="badge text-bg-danger">Avatar blocked until ${formatDate(a.avatarBlockedUntil)}</span>`
+        : `<span class="badge text-bg-secondary">Avatar blocked (expired ${formatDate(a.avatarBlockedUntil)})</span>`);
+    }
+    const badge = badges.length ? badges.join(' ') : `<span class="badge text-bg-warning text-dark">Warning</span>`;
     const ack = a.acknowledgedAt
       ? `<span class="text-muted small">Acknowledged ${formatDate(a.acknowledgedAt)}</span>`
       : `<span class="text-warning small">Not yet acknowledged</span>`;
@@ -157,10 +165,18 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
               <input class="form-check-input" type="radio" name="actionType" id="radio-block" value="block">
               <label class="form-check-label" for="radio-block">Block chat until…</label>
             </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="actionType" id="radio-avatar-block" value="avatar-block">
+              <label class="form-check-label" for="radio-avatar-block">Block avatar until…</label>
+            </div>
           </div>
           <div id="date-picker-group" class="mb-3 d-none">
-            <label class="form-label" for="input-block-until">Block until</label>
+            <label class="form-label" for="input-block-until">Block chat until</label>
             <input id="input-block-until" type="date" class="form-control" style="max-width:280px">
+          </div>
+          <div id="avatar-date-picker-group" class="mb-3 d-none">
+            <label class="form-label" for="input-avatar-block-until">Block avatar until <span class="text-muted small">(current avatar will be deleted)</span></label>
+            <input id="input-avatar-block-until" type="date" class="form-control" style="max-width:280px">
           </div>
           <button id="btn-submit" class="btn btn-warning">Submit moderation action</button>
         </div>
@@ -173,11 +189,22 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
   document.getElementById('btn-select-none')?.addEventListener('click', () =>
     document.querySelectorAll('.msg-checkbox').forEach(cb => cb.checked = false));
 
-  document.getElementById('radio-block').addEventListener('change', () =>
-    document.getElementById('date-picker-group').classList.remove('d-none'));
+  const hideDatePickers = () => {
+    document.getElementById('date-picker-group').classList.add('d-none');
+    document.getElementById('avatar-date-picker-group').classList.add('d-none');
+  };
 
-  document.getElementById('radio-warn').addEventListener('change', () =>
-    document.getElementById('date-picker-group').classList.add('d-none'));
+  document.getElementById('radio-warn').addEventListener('change', hideDatePickers);
+
+  document.getElementById('radio-block').addEventListener('change', () => {
+    hideDatePickers();
+    document.getElementById('date-picker-group').classList.remove('d-none');
+  });
+
+  document.getElementById('radio-avatar-block').addEventListener('change', () => {
+    hideDatePickers();
+    document.getElementById('avatar-date-picker-group').classList.remove('d-none');
+  });
 
   document.getElementById('btn-submit').addEventListener('click', () => submitAction(player.publicId));
 }
@@ -186,11 +213,18 @@ async function submitAction(playerPublicId) {
   const reason = document.getElementById('input-reason').value || null;
   const reasonDetails = document.getElementById('input-details').value.trim() || null;
   const isBlock = document.getElementById('radio-block').checked;
+  const isAvatarBlock = document.getElementById('radio-avatar-block').checked;
   const blockUntilInput = document.getElementById('input-block-until')?.value;
+  const avatarBlockUntilInput = document.getElementById('input-avatar-block-until')?.value;
   const resultEl = document.getElementById('action-result');
 
   if (isBlock && !blockUntilInput) {
-    resultEl.innerHTML = '<div class="alert alert-danger">Please pick a block-until date.</div>';
+    resultEl.innerHTML = '<div class="alert alert-danger">Please pick a chat block-until date.</div>';
+    return;
+  }
+
+  if (isAvatarBlock && !avatarBlockUntilInput) {
+    resultEl.innerHTML = '<div class="alert alert-danger">Please pick an avatar block-until date.</div>';
     return;
   }
 
@@ -204,6 +238,7 @@ async function submitAction(playerPublicId) {
       reason,
       reasonDetails,
       chatBlockedUntil: isBlock ? new Date(blockUntilInput).toISOString() : undefined,
+      avatarBlockedUntil: isAvatarBlock ? new Date(avatarBlockUntilInput).toISOString() : undefined,
       relatedChatMessages,
     });
 

@@ -1,5 +1,5 @@
 import { state } from './api.js';
-import { esc, navigate } from './utils.js';
+import { esc, navigate, getTabCount } from './utils.js';
 
 export function updateNav() {
   const el = document.getElementById('nav-controls');
@@ -19,21 +19,34 @@ export function updateNav() {
   document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
+function badge(tab) {
+  const n = getTabCount(tab);
+  if (!n) return '';
+  return `<span class="badge rounded-pill text-bg-danger ms-1">${n}</span>`;
+}
+
 export function pageNav(active) {
   document.getElementById('nav-tabs').innerHTML = `
     <ul class="nav nav-underline ms-3">
       <li class="nav-item">
-        <a class="nav-link ${active === 'messages' ? 'active' : ''}" href="#/messages">Messages</a>
+        <a class="nav-link ${active === 'messages' ? 'active' : ''}" href="#/messages">Messages${badge('messages')}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link ${active === 'players' ? 'active' : ''}" href="#/players">New accounts</a>
+        <a class="nav-link ${active === 'players' ? 'active' : ''}" href="#/players">New accounts${badge('players')}</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link ${active === 'avatars' ? 'active' : ''}" href="#/avatars">Avatars${badge('avatars')}</a>
       </li>
     </ul>`;
 }
+
 
 export function logout() {
   localStorage.removeItem('apiKey');
   state.apiKey = '';
   state.messages = null;
+  state.players = null;
+  state.avatars = null;
+  state.countsInitialized = false;
   navigate('login');
 }
