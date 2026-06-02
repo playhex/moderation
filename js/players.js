@@ -23,6 +23,7 @@ export async function renderPlayers() {
     state.messages = null;
     state.players = null;
     state.avatars = null;
+    state.history = null;
     document.getElementById('players-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadPlayers();

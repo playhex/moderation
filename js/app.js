@@ -5,6 +5,7 @@ import { renderMessages } from './messages.js';
 import { renderPlayers } from './players.js';
 import { renderAction } from './action.js';
 import { renderAvatars } from './avatars.js';
+import { renderHistory } from './history.js';
 import { refreshAllCounts } from './counts.js';
 
 async function initCounts(path) {
@@ -31,6 +32,7 @@ async function render() {
     case 'players':  await renderPlayers(); break;
     case 'action':   await renderAction(params); break;
     case 'avatars':  await renderAvatars(); break;
+    case 'history':  await renderHistory(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
   }
 

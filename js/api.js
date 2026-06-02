@@ -2,6 +2,7 @@ export const state = {
   apiBase: localStorage.getItem('apiBase') || 'http://localhost:3000',
   apiKey: localStorage.getItem('apiKey') || '',
   messages: null,
+  history: null,
 };
 
 export async function api(method, path, body = null) {

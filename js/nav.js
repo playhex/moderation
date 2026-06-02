@@ -37,6 +37,9 @@ export function pageNav(active) {
       <li class="nav-item">
         <a class="nav-link ${active === 'avatars' ? 'active' : ''}" href="#/avatars">Avatars${badge('avatars')}</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link ${active === 'history' ? 'active' : ''}" href="#/history">Last moderation actions</a>
+      </li>
     </ul>`;
 }
 
@@ -47,6 +50,7 @@ export function logout() {
   state.messages = null;
   state.players = null;
   state.avatars = null;
+  state.history = null;
   state.countsInitialized = false;
   navigate('login');
 }

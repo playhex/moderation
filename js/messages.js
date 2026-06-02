@@ -95,7 +95,7 @@ function renderTable(msgs) {
     }
 
     const author = m.player
-      ? `<span class="font-monospace text-muted small me-1">${m.player.isGuest ? '<i>Guest</i>' : ''} ${esc(m.player.pseudo)}:</span>`
+      ? `<span class="font-monospace text-muted small me-1">${m.player.isGuest ? '<i>Guest</i>' : ''} <a href="#/action?player=${esc(m.player.publicId)}" class="text-decoration-none text-muted">${esc(m.player.pseudo)}</a>:</span>`
       : '<span class="text-muted">system:</span>';
 
     const contentClass = m.deletedByModeration ? 'text-decoration-line-through opacity-50' : '';
