@@ -178,6 +178,12 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
             <label class="form-label" for="input-avatar-block-until">Block avatar until <span class="text-muted small">(current avatar will be deleted)</span></label>
             <input id="input-avatar-block-until" type="date" class="form-control" style="max-width:280px">
           </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="check-moderate-nickname">
+              <label class="form-check-label" for="check-moderate-nickname">Moderate nickname <span class="text-muted small">(rename to "moderated XXXX")</span></label>
+            </div>
+          </div>
           <button id="btn-submit" class="btn btn-warning">Submit moderation action</button>
         </div>
       </div>
@@ -229,6 +235,7 @@ async function submitAction(playerPublicId) {
   }
 
   const relatedChatMessages = [...document.querySelectorAll('.msg-checkbox:checked')].map(cb => cb.value);
+  const moderateNickname = document.getElementById('check-moderate-nickname')?.checked || false;
 
   resultEl.innerHTML = '<div class="text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Submitting…</div>';
 
@@ -240,6 +247,7 @@ async function submitAction(playerPublicId) {
       chatBlockedUntil: isBlock ? new Date(blockUntilInput).toISOString() : undefined,
       avatarBlockedUntil: isAvatarBlock ? new Date(avatarBlockUntilInput).toISOString() : undefined,
       relatedChatMessages,
+      moderateNickname: moderateNickname || undefined,
     });
 
     resultEl.innerHTML = '<div class="alert alert-success">Action created successfully.</div>';
