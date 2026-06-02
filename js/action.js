@@ -212,10 +212,10 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
     document.getElementById('avatar-date-picker-group').classList.remove('d-none');
   });
 
-  document.getElementById('btn-submit').addEventListener('click', () => submitAction(player.publicId));
+  document.getElementById('btn-submit').addEventListener('click', () => submitAction(player.publicId, player.pseudo));
 }
 
-async function submitAction(playerPublicId) {
+async function submitAction(playerPublicId, playerPseudo) {
   const reason = document.getElementById('input-reason').value || null;
   const reasonDetails = document.getElementById('input-details').value.trim() || null;
   const isBlock = document.getElementById('radio-block').checked;
@@ -235,7 +235,7 @@ async function submitAction(playerPublicId) {
   }
 
   const relatedChatMessages = [...document.querySelectorAll('.msg-checkbox:checked')].map(cb => cb.value);
-  const moderateNickname = document.getElementById('check-moderate-nickname')?.checked || false;
+  const moderateNicknameChecked = document.getElementById('check-moderate-nickname')?.checked || false;
 
   resultEl.innerHTML = '<div class="text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Submitting…</div>';
 
@@ -247,7 +247,7 @@ async function submitAction(playerPublicId) {
       chatBlockedUntil: isBlock ? new Date(blockUntilInput).toISOString() : undefined,
       avatarBlockedUntil: isAvatarBlock ? new Date(avatarBlockUntilInput).toISOString() : undefined,
       relatedChatMessages,
-      moderateNickname: moderateNickname || undefined,
+      moderateNickname: moderateNicknameChecked ? playerPseudo : undefined,
     });
 
     resultEl.innerHTML = '<div class="alert alert-success">Action created successfully.</div>';
