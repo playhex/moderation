@@ -62,6 +62,12 @@ function renderList(actions) {
     if (a.nicknameModerated) {
       badges.push(`<span class="badge text-bg-warning text-dark">Nickname</span>`);
     }
+    if (a.ipBannedUntil) {
+      const ipBanActive = new Date(a.ipBannedUntil) > now;
+      badges.push(ipBanActive
+        ? `<span class="badge" style="background-color:#6f42c1">IPs banned</span>`
+        : `<span class="badge text-bg-secondary">IP ban (expired)</span>`);
+    }
     if (!badges.length) {
       badges.push(`<span class="badge text-bg-warning text-dark">Warning</span>`);
     }

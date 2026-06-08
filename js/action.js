@@ -19,16 +19,17 @@ export async function renderAction(params) {
     </div>`;
 
   try {
-    const [player, pastActions, allMessages] = await Promise.all([
+    const [player, pastActions, allMessages, playerIps] = await Promise.all([
       api('GET', `/api/admin/moderation/players/${playerPublicId}`),
       api('GET', `/api/admin/moderation/players/${playerPublicId}/actions`),
       state.messages
         ? Promise.resolve(state.messages)
         : api('GET', '/api/admin/moderation/chat-messages').then(m => { state.messages = m; return m; }),
+      api('GET', `/api/admin/moderation/players/${playerPublicId}/ips`),
     ]);
 
     const playerMessages = allMessages.filter(entry => entry.message.player?.publicId === playerPublicId);
-    renderForm(player, pastActions, playerMessages, fromMessageId);
+    renderForm(player, pastActions, playerMessages, fromMessageId, playerIps);
   } catch (e) {
     document.getElementById('action-body').innerHTML =
       `<div class="alert alert-danger">${esc(e.message)}</div>`;
@@ -45,6 +46,7 @@ function renderPastActions(actions) {
   return actions.map(a => {
     const chatActive = a.chatBlockedUntil && new Date(a.chatBlockedUntil) > now;
     const avatarActive = a.avatarBlockedUntil && new Date(a.avatarBlockedUntil) > now;
+    const ipBanActive = a.ipBannedUntil && new Date(a.ipBannedUntil) > now;
     const badges = [];
     if (a.chatBlockedUntil) {
       badges.push(chatActive
@@ -55,6 +57,11 @@ function renderPastActions(actions) {
       badges.push(avatarActive
         ? `<span class="badge text-bg-danger">Avatar blocked until ${formatDate(a.avatarBlockedUntil)}</span>`
         : `<span class="badge text-bg-secondary">Avatar blocked (expired ${formatDate(a.avatarBlockedUntil)})</span>`);
+    }
+    if (a.ipBannedUntil) {
+      badges.push(ipBanActive
+        ? `<span class="badge" style="background-color:#6f42c1">IPs banned until ${formatDate(a.ipBannedUntil)}</span>`
+        : `<span class="badge text-bg-secondary">IPs banned (expired ${formatDate(a.ipBannedUntil)})</span>`);
     }
     const badge = badges.length ? badges.join(' ') : `<span class="badge text-bg-warning text-dark">Warning</span>`;
     const ack = a.acknowledgedAt
@@ -84,7 +91,30 @@ function renderPastActions(actions) {
   }).join('');
 }
 
-function renderForm(player, pastActions, playerMessages, fromMessageId) {
+function renderPlayerIps(playerIps) {
+  if (!playerIps.length) {
+    return '<p class="text-muted small mb-0">No IPs recorded.</p>';
+  }
+
+  return `<ul class="list-unstyled mb-0 small">
+    ${playerIps.map(({ ip, lastUsedAt, otherPlayers }) => {
+      const others = otherPlayers.length
+        ? `<div class="ms-2 mt-1 text-warning">
+            Also used by: ${otherPlayers.map(p =>
+              `<a href="#/action?player=${esc(p.publicId)}">${esc(p.pseudo)}</a>`
+            ).join(', ')}
+          </div>`
+        : '';
+      return `<li class="mb-2">
+        <code>${esc(ip)}</code>
+        <span class="text-muted ms-1">— last used ${formatDate(lastUsedAt)}</span>
+        ${others}
+      </li>`;
+    }).join('')}
+  </ul>`;
+}
+
+function renderForm(player, pastActions, playerMessages, fromMessageId, playerIps) {
   const reasonOptions = '<option value="">— none —</option>'
     + Object.entries(REASONS).map(([value, label]) =>
         `<option value="${esc(value)}">${esc(label)}</option>`
@@ -122,9 +152,13 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
             <dd class="col-7">${player.registeredAt ? formatDate(player.registeredAt) : '<span class="text-muted">—</span>'}</dd>
           </dl>
         </div>
-        <div class="card p-3">
+        <div class="card p-3 mb-4">
           <h6 class="text-uppercase text-muted mb-3">Past actions</h6>
           ${renderPastActions(pastActions)}
+        </div>
+        <div class="card p-3">
+          <h6 class="text-uppercase text-muted mb-3">Known IPs</h6>
+          ${renderPlayerIps(playerIps)}
         </div>
       </div>
 
@@ -169,6 +203,10 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
               <input class="form-check-input" type="radio" name="actionType" id="radio-avatar-block" value="avatar-block">
               <label class="form-check-label" for="radio-avatar-block">Block avatar until…</label>
             </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="actionType" id="radio-ip-ban" value="ip-ban">
+              <label class="form-check-label text-danger" for="radio-ip-ban">Ban IPs until…</label>
+            </div>
           </div>
           <div id="date-picker-group" class="mb-3 d-none">
             <label class="form-label" for="input-block-until">Block chat until</label>
@@ -177,6 +215,10 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
           <div id="avatar-date-picker-group" class="mb-3 d-none">
             <label class="form-label" for="input-avatar-block-until">Block avatar until <span class="text-muted small">(current avatar will be deleted)</span></label>
             <input id="input-avatar-block-until" type="date" class="form-control" style="max-width:280px">
+          </div>
+          <div id="ip-ban-date-picker-group" class="mb-3 d-none">
+            <label class="form-label" for="input-ip-ban-until">Ban all known IPs until <span class="text-muted small">(blocks connection from all known IPs)</span></label>
+            <input id="input-ip-ban-until" type="date" class="form-control" style="max-width:280px">
           </div>
           <div class="mb-3">
             <div class="form-check">
@@ -198,6 +240,7 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
   const hideDatePickers = () => {
     document.getElementById('date-picker-group').classList.add('d-none');
     document.getElementById('avatar-date-picker-group').classList.add('d-none');
+    document.getElementById('ip-ban-date-picker-group').classList.add('d-none');
   };
 
   document.getElementById('radio-warn').addEventListener('change', hideDatePickers);
@@ -212,6 +255,11 @@ function renderForm(player, pastActions, playerMessages, fromMessageId) {
     document.getElementById('avatar-date-picker-group').classList.remove('d-none');
   });
 
+  document.getElementById('radio-ip-ban').addEventListener('change', () => {
+    hideDatePickers();
+    document.getElementById('ip-ban-date-picker-group').classList.remove('d-none');
+  });
+
   document.getElementById('btn-submit').addEventListener('click', () => submitAction(player.publicId, player.pseudo));
 }
 
@@ -220,8 +268,10 @@ async function submitAction(playerPublicId, playerPseudo) {
   const reasonDetails = document.getElementById('input-details').value.trim() || null;
   const isBlock = document.getElementById('radio-block').checked;
   const isAvatarBlock = document.getElementById('radio-avatar-block').checked;
+  const isIpBan = document.getElementById('radio-ip-ban').checked;
   const blockUntilInput = document.getElementById('input-block-until')?.value;
   const avatarBlockUntilInput = document.getElementById('input-avatar-block-until')?.value;
+  const ipBanUntilInput = document.getElementById('input-ip-ban-until')?.value;
   const resultEl = document.getElementById('action-result');
 
   if (isBlock && !blockUntilInput) {
@@ -231,6 +281,11 @@ async function submitAction(playerPublicId, playerPseudo) {
 
   if (isAvatarBlock && !avatarBlockUntilInput) {
     resultEl.innerHTML = '<div class="alert alert-danger">Please pick an avatar block-until date.</div>';
+    return;
+  }
+
+  if (isIpBan && !ipBanUntilInput) {
+    resultEl.innerHTML = '<div class="alert alert-danger">Please pick an IP ban-until date.</div>';
     return;
   }
 
@@ -246,6 +301,7 @@ async function submitAction(playerPublicId, playerPseudo) {
       reasonDetails,
       chatBlockedUntil: isBlock ? new Date(blockUntilInput).toISOString() : undefined,
       avatarBlockedUntil: isAvatarBlock ? new Date(avatarBlockUntilInput).toISOString() : undefined,
+      ipBannedUntil: isIpBan ? new Date(ipBanUntilInput).toISOString() : undefined,
       relatedChatMessages,
       moderateNickname: moderateNicknameChecked ? playerPseudo : undefined,
     });
