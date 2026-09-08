@@ -29,9 +29,8 @@ export async function renderTournaments() {
 
 async function loadTournaments() {
   try {
-    // Public endpoint, returns active tournaments. Keep only those not yet started.
-    const tournaments = state.tournaments
-      ?? (await api('GET', '/api/tournaments/active')).filter(t => t.state === 'created');
+    // Public endpoint, returns active tournaments: not yet started (created), and currently playing (running)
+    const tournaments = state.tournaments ?? await api('GET', '/api/tournaments/active');
     state.tournaments = tournaments;
     renderList(tournaments);
   } catch (e) {
@@ -49,9 +48,38 @@ function alertError(action, e) {
 }
 
 function renderList(tournaments) {
+  document.getElementById('tournaments-body').innerHTML = `
+    <h5 class="mb-3">Incoming</h5>
+    ${renderTable(tournaments.filter(t => t.state === 'created'))}
+    <h5 class="mb-3 mt-4">Ongoing</h5>
+    ${renderTable(tournaments.filter(t => t.state === 'running'))}`;
+
+  document.querySelectorAll('.btn-feature').forEach(btn => {
+    btn.addEventListener('click', () => setFeatured(btn.dataset.slug, parseInt(btn.dataset.days, 10)));
+  });
+
+  document.querySelectorAll('.btn-feature-custom').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = btn.closest('tr').querySelector('.input-days');
+      const days = parseFloat(input.value);
+
+      if (isNaN(days) || days < 0) {
+        alert('Enter a valid number of days.');
+        return;
+      }
+
+      setFeatured(btn.dataset.slug, days);
+    });
+  });
+
+  document.querySelectorAll('.btn-cancel').forEach(btn => {
+    btn.addEventListener('click', () => cancelTournament(btn.dataset.slug));
+  });
+}
+
+function renderTable(tournaments) {
   if (!tournaments.length) {
-    document.getElementById('tournaments-body').innerHTML = '<p class="text-muted">No incoming tournament.</p>';
-    return;
+    return '<p class="text-muted">No tournament.</p>';
   }
 
   const rows = tournaments.map(t => {
@@ -85,7 +113,7 @@ function renderList(tournaments) {
     </tr>`;
   }).join('');
 
-  document.getElementById('tournaments-body').innerHTML = `
+  return `
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <thead>
@@ -100,28 +128,6 @@ function renderList(tournaments) {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
-
-  document.querySelectorAll('.btn-feature').forEach(btn => {
-    btn.addEventListener('click', () => setFeatured(btn.dataset.slug, parseInt(btn.dataset.days, 10)));
-  });
-
-  document.querySelectorAll('.btn-feature-custom').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = btn.closest('tr').querySelector('.input-days');
-      const days = parseFloat(input.value);
-
-      if (isNaN(days) || days < 0) {
-        alert('Enter a valid number of days.');
-        return;
-      }
-
-      setFeatured(btn.dataset.slug, days);
-    });
-  });
-
-  document.querySelectorAll('.btn-cancel').forEach(btn => {
-    btn.addEventListener('click', () => cancelTournament(btn.dataset.slug));
-  });
 }
 
 async function setFeatured(slug, days) {
