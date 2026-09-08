@@ -21,7 +21,7 @@ export async function renderPlayers() {
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
     state.messages = null;
-    state.players = null;
+      state.players = null;
     state.avatars = null;
     state.history = null;
     document.getElementById('players-body').innerHTML =
@@ -30,8 +30,14 @@ export async function renderPlayers() {
     refreshAllCounts('players');
   });
 
-  document.getElementById('btn-mark-read').addEventListener('click', () => {
-    setLastRead('players');
+  document.getElementById('btn-mark-read').addEventListener('click', async () => {
+    try {
+      await setLastRead('players');
+    } catch (e) {
+      alert(`Could not mark as seen: ${e.message}`);
+      return;
+    }
+
     renderList(state.players);
   });
 

@@ -20,6 +20,12 @@ Now you can moderate your PlayHex instance, logins are:
 - **API base Url**: your PlayHex instance (e.g `http://localhost:3001`)
 - **Moderator API key**: your moderator password from .env (e.g `myPassword`)
 
+Dates when messages, new accounts and avatars have been marked as seen are stored on the server
+(and no longer in the browser local storage), so they stay synchronized between all your devices.
+
+The "Tournaments featuring" page also requires the **admin** password (`ADMIN_PASSWORD` in .env),
+to be entered on that page, because editing or canceling a tournament goes through the admin API.
+
 ## Screenshots
 
 All last chat messages from any are listed, so moderators can easily review all new messages at once:

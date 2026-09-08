@@ -30,8 +30,10 @@ export async function renderMessages() {
     refreshAllCounts('messages');
   });
 
-  document.getElementById('btn-mark-read').addEventListener('click', () => {
-    setLastRead('messages');
+  document.getElementById('btn-mark-read').addEventListener('click', async () => {
+    await setLastRead('messages');
+
+    // Messages stay displayed, but grayed. They will disappear on next refresh.
     renderTable(state.messages);
   });
 
@@ -57,7 +59,7 @@ function sourceKey(entry) {
 
 function renderTable(msgs) {
   if (!msgs.length) {
-    document.getElementById('msg-body').innerHTML = '<p class="text-muted">No messages.</p>';
+    document.getElementById('msg-body').innerHTML = '<p class="text-muted">No new message.</p>';
     return;
   }
 
@@ -113,6 +115,7 @@ function renderTable(msgs) {
     const extraClass = [
       isDifferentSourceThanPrevious ? 'mt-3' : '',
       isSeparator ? 'unread-separator' : '',
+      isOld ? 'opacity-50' : '',
     ].filter(Boolean).join(' ');
 
     return `<li class="${extraClass}">

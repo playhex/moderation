@@ -21,7 +21,7 @@ export async function renderAvatars() {
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
     state.messages = null;
-    state.players = null;
+      state.players = null;
     state.avatars = null;
     document.getElementById('avatars-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
@@ -29,8 +29,14 @@ export async function renderAvatars() {
     refreshAllCounts('avatars');
   });
 
-  document.getElementById('btn-mark-read').addEventListener('click', () => {
-    setLastRead('avatars');
+  document.getElementById('btn-mark-read').addEventListener('click', async () => {
+    try {
+      await setLastRead('avatars');
+    } catch (e) {
+      alert(`Could not mark as seen: ${e.message}`);
+      return;
+    }
+
     renderList(state.avatars);
   });
 

@@ -1,11 +1,12 @@
 import { state } from './api.js';
-import { getRoute, navigate } from './utils.js';
+import { getRoute, navigate, loadSeen } from './utils.js';
 import { renderLogin } from './login.js';
 import { renderMessages } from './messages.js';
 import { renderPlayers } from './players.js';
 import { renderAction } from './action.js';
 import { renderAvatars } from './avatars.js';
 import { renderHistory } from './history.js';
+import { renderTournaments } from './tournaments.js';
 import { refreshAllCounts } from './counts.js';
 
 async function initCounts(path) {
@@ -26,6 +27,11 @@ async function render() {
     return;
   }
 
+  if (state.apiKey && state.seen === null) {
+    // Fetch "seen" dates from server before rendering any page needing them
+    try { await loadSeen(); } catch (_) { state.seen = {}; }
+  }
+
   switch (path) {
     case 'login':    renderLogin(); break;
     case 'messages': await renderMessages(); break;
@@ -33,6 +39,7 @@ async function render() {
     case 'action':   await renderAction(params); break;
     case 'avatars':  await renderAvatars(); break;
     case 'history':  await renderHistory(); break;
+    case 'tournaments': await renderTournaments(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
   }
 

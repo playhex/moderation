@@ -40,6 +40,9 @@ export function pageNav(active) {
       <li class="nav-item">
         <a class="nav-link ${active === 'history' ? 'active' : ''}" href="#/history">Last moderation actions</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link ${active === 'tournaments' ? 'active' : ''}" href="#/tournaments">Tournaments featuring</a>
+      </li>
     </ul>`;
 }
 
@@ -51,6 +54,8 @@ export function logout() {
   state.players = null;
   state.avatars = null;
   state.history = null;
+  state.tournaments = null;
+  state.seen = null;
   state.countsInitialized = false;
   navigate('login');
 }

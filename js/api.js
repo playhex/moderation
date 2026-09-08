@@ -1,16 +1,25 @@
 export const state = {
   apiBase: localStorage.getItem('apiBase') || 'http://localhost:3000',
   apiKey: localStorage.getItem('apiKey') || '',
+  adminKey: localStorage.getItem('adminKey') || '',
   messages: null,
   history: null,
+  tournaments: null,
+
+  /** Dates when each tab has been marked as seen, loaded from server. Like: { messages: '2026-09-08T…', … } */
+  seen: null,
 };
 
-export async function api(method, path, body = null) {
+/**
+ * @param {string} key Token to use, defaults to moderator api key.
+ *                     Some endpoints require the admin token instead.
+ */
+export async function api(method, path, body = null, key = null) {
   const res = await fetch(state.apiBase + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${state.apiKey}`,
+      'Authorization': `Bearer ${key ?? state.apiKey}`,
     },
     body: body != null ? JSON.stringify(body) : undefined,
   });

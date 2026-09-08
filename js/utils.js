@@ -1,12 +1,29 @@
+import { state, api } from './api.js';
+
 export function relativeTime(iso) {
   const diff = Date.now() - new Date(iso).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s ago`;
+  const future = diff < 0;
+  const wrap = str => future ? `in ${str}` : `${str} ago`;
+  const s = Math.floor(Math.abs(diff) / 1000);
+  if (s < 60) return wrap(`${s}s`);
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return wrap(`${m}m`);
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return wrap(`${h}h`);
+  return wrap(`${Math.floor(h / 24)}d`);
+}
+
+/** Formats a number of seconds like "4d 6h", or null if 0 or negative. */
+export function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m && !d) parts.push(`${m}m`);
+  return parts.length ? parts.join(' ') : `${seconds}s`;
 }
 
 export function formatDate(iso) {
@@ -40,13 +57,23 @@ export function navigate(path) {
   location.hash = '/' + path;
 }
 
+/**
+ * "Seen" dates are stored server side (and no longer in local storage),
+ * so they stay synchronized between all moderator devices.
+ */
+export async function loadSeen() {
+  state.seen = await api('GET', '/api/admin/moderation/seen');
+}
+
 export function getLastRead(tab) {
-  const v = localStorage.getItem(`lastRead:${tab}`);
+  const v = state.seen?.[tab];
   return v ? new Date(v) : null;
 }
 
-export function setLastRead(tab) {
-  localStorage.setItem(`lastRead:${tab}`, new Date().toISOString());
+export async function setLastRead(tab) {
+  const date = new Date().toISOString();
+  state.seen = { ...(state.seen ?? {}), [tab]: date };
+  await api('POST', `/api/admin/moderation/seen/${tab}`, { date });
 }
 
 export function getTabCount(tab) {
