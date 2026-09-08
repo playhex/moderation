@@ -23,8 +23,8 @@ Now you can moderate your PlayHex instance, logins are:
 Dates when messages, new accounts and avatars have been marked as seen are stored on the server
 (and no longer in the browser local storage), so they stay synchronized between all your devices.
 
-The "Tournaments featuring" page also requires the **admin** password (`ADMIN_PASSWORD` in .env),
-to be entered on that page, because editing or canceling a tournament goes through the admin API.
+On the "Tournaments featuring" page, editing or canceling a tournament goes through the admin API,
+so you must be logged in with the **admin** password (`ADMIN_PASSWORD` in .env) and not the moderator one.
 
 ## Screenshots
 

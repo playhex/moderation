@@ -13,16 +13,6 @@ export async function renderTournaments() {
       <h4 class="mb-0">Tournaments featuring</h4>
       <button id="btn-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
     </div>
-    <div class="row mb-3">
-      <div class="col-md-5">
-        <label class="form-label small text-muted" for="input-admin-key">Admin token (required to edit or cancel a tournament)</label>
-        <div class="input-group input-group-sm">
-          <input id="input-admin-key" type="password" class="form-control" placeholder="Bearer token" value="${esc(state.adminKey)}">
-          <button id="btn-save-admin-key" class="btn btn-outline-secondary">Save</button>
-        </div>
-      </div>
-    </div>
-    <div id="tournaments-error"></div>
     <div id="tournaments-body">
       <div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>
     </div>`;
@@ -32,12 +22,6 @@ export async function renderTournaments() {
     document.getElementById('tournaments-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadTournaments();
-  });
-
-  document.getElementById('btn-save-admin-key').addEventListener('click', () => {
-    state.adminKey = document.getElementById('input-admin-key').value.trim();
-    localStorage.setItem('adminKey', state.adminKey);
-    renderList(state.tournaments ?? []);
   });
 
   await loadTournaments();
@@ -56,10 +40,12 @@ async function loadTournaments() {
   }
 }
 
-function showError(message) {
-  document.getElementById('tournaments-error').innerHTML = message
-    ? `<div class="alert alert-danger">${esc(message)}</div>`
-    : '';
+/**
+ * Editing a tournament requires an admin token,
+ * so it fails when logged in with a moderator token.
+ */
+function alertError(action, e) {
+  alert(`Could not ${action}: ${e.message}\n\nNote: this requires an admin token, a moderator token is not enough.`);
 }
 
 function renderList(tournaments) {
@@ -68,8 +54,6 @@ function renderList(tournaments) {
     return;
   }
 
-  const disabled = state.adminKey ? '' : ' disabled';
-
   const rows = tournaments.map(t => {
     const featured = formatDuration(t.featuredFromInSeconds);
     const featuredHtml = featured
@@ -77,7 +61,7 @@ function renderList(tournaments) {
       : '<span class="text-muted">not featured</span>';
 
     const quickButtons = QUICK_DAYS.map(days => `
-      <button class="btn btn-sm btn-outline-primary btn-feature" data-slug="${esc(t.slug)}" data-days="${days}"${disabled}>${days} days</button>
+      <button class="btn btn-sm btn-outline-primary btn-feature" data-slug="${esc(t.slug)}" data-days="${days}">${days} days</button>
     `).join('');
 
     return `<tr data-slug="${esc(t.slug)}">
@@ -91,18 +75,17 @@ function renderList(tournaments) {
         <div class="d-flex flex-wrap gap-1 align-items-center">
           ${quickButtons}
           <div class="input-group input-group-sm" style="width: 10rem;">
-            <input type="number" min="0" step="1" class="form-control input-days" placeholder="days"${disabled}>
-            <button class="btn btn-outline-primary btn-feature-custom" data-slug="${esc(t.slug)}"${disabled}>Set</button>
+            <input type="number" min="0" step="1" class="form-control input-days" placeholder="days">
+            <button class="btn btn-outline-primary btn-feature-custom" data-slug="${esc(t.slug)}">Set</button>
           </div>
-          <button class="btn btn-sm btn-outline-secondary btn-feature" data-slug="${esc(t.slug)}" data-days="0"${disabled}>Remove</button>
-          <button class="btn btn-sm btn-outline-danger btn-cancel ms-3" data-slug="${esc(t.slug)}"${disabled}>Cancel tournament</button>
+          <button class="btn btn-sm btn-outline-secondary btn-feature" data-slug="${esc(t.slug)}" data-days="0">Remove</button>
+          <button class="btn btn-sm btn-outline-danger btn-cancel ms-3" data-slug="${esc(t.slug)}">Cancel tournament</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 
   document.getElementById('tournaments-body').innerHTML = `
-    ${state.adminKey ? '' : '<div class="alert alert-warning py-2">Enter the admin token above to edit tournaments.</div>'}
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <thead>
@@ -128,7 +111,7 @@ function renderList(tournaments) {
       const days = parseFloat(input.value);
 
       if (isNaN(days) || days < 0) {
-        showError('Enter a valid number of days.');
+        alert('Enter a valid number of days.');
         return;
       }
 
@@ -142,14 +125,12 @@ function renderList(tournaments) {
 }
 
 async function setFeatured(slug, days) {
-  showError('');
-
   const featuredFromInSeconds = Math.round(days * 86400);
 
   try {
-    await api('PATCH', `/api/admin/tournaments/${encodeURIComponent(slug)}`, { featuredFromInSeconds }, state.adminKey);
+    await api('PATCH', `/api/admin/tournaments/${encodeURIComponent(slug)}`, { featuredFromInSeconds });
   } catch (e) {
-    showError(`Could not update "${slug}": ${e.message}`);
+    alertError(`update "${slug}"`, e);
     return;
   }
 
@@ -159,16 +140,14 @@ async function setFeatured(slug, days) {
 }
 
 async function cancelTournament(slug) {
-  showError('');
-
   if (!confirm(`Cancel tournament "${slug}"? This cannot be undone.`)) {
     return;
   }
 
   try {
-    await api('DELETE', `/api/admin/tournaments/${encodeURIComponent(slug)}`, null, state.adminKey);
+    await api('DELETE', `/api/admin/tournaments/${encodeURIComponent(slug)}`);
   } catch (e) {
-    showError(`Could not cancel "${slug}": ${e.message}`);
+    alertError(`cancel "${slug}"`, e);
     return;
   }
 
