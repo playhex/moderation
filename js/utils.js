@@ -70,10 +70,37 @@ export function getLastRead(tab) {
   return v ? new Date(v) : null;
 }
 
-export async function setLastRead(tab) {
-  const date = new Date().toISOString();
-  state.seen = { ...(state.seen ?? {}), [tab]: date };
-  await api('POST', `/api/admin/moderation/seen/${tab}`, { date });
+/**
+ * Marks a tab as read, at the date of its most recent element (and not "now"):
+ * elements created between the last refresh and the click on "mark as read"
+ * must stay unread.
+ *
+ * @param {Date} date Defaults to now, when there is no element at all.
+ */
+export async function setLastRead(tab, date = new Date()) {
+  const isoDate = date.toISOString();
+  state.seen = { ...(state.seen ?? {}), [tab]: isoDate };
+  await api('POST', `/api/admin/moderation/seen/${tab}`, { date: isoDate });
+}
+
+/**
+ * Date of the most recent element of a list, or null if list is empty.
+ *
+ * @param {any[]} elements
+ * @param {(element: any) => string} getDate Returns the date of an element, as iso string
+ * @returns {null | Date}
+ */
+export function mostRecentDate(elements, getDate) {
+  let mostRecent = null;
+
+  for (const element of elements) {
+    const date = new Date(getDate(element));
+
+    if (isNaN(date.getTime())) continue;
+    if (mostRecent === null || date > mostRecent) mostRecent = date;
+  }
+
+  return mostRecent;
 }
 
 export function getTabCount(tab) {

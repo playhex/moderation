@@ -1,5 +1,5 @@
 import { api, state } from './api.js';
-import { esc, formatDate, relativeTime, getLastRead, setLastRead, setTabCount } from './utils.js';
+import { esc, formatDate, relativeTime, getLastRead, setLastRead, setTabCount, mostRecentDate } from './utils.js';
 import { updateNav, pageNav } from './nav.js';
 import { refreshAllCounts } from './counts.js';
 
@@ -31,7 +31,11 @@ export async function renderAvatars() {
 
   document.getElementById('btn-mark-read').addEventListener('click', async () => {
     try {
-      await setLastRead('avatars');
+      // Mark as read at the date of the most recent avatar upload, and not "now":
+      // avatars uploaded since last refresh must stay unread.
+      const lastDate = mostRecentDate(state.avatars ?? [], p => p.avatarUpdatedAt);
+
+      await setLastRead('avatars', lastDate ?? new Date());
     } catch (e) {
       alert(`Could not mark as seen: ${e.message}`);
       return;

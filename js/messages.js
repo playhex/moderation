@@ -1,5 +1,5 @@
 import { state, api } from './api.js';
-import { esc, relativeTime, getLastRead, setLastRead, setTabCount } from './utils.js';
+import { esc, relativeTime, getLastRead, setLastRead, setTabCount, mostRecentDate } from './utils.js';
 import { updateNav, pageNav } from './nav.js';
 import { refreshAllCounts } from './counts.js';
 import { highlightBadWords } from './badwords.js';
@@ -31,7 +31,11 @@ export async function renderMessages() {
   });
 
   document.getElementById('btn-mark-read').addEventListener('click', async () => {
-    await setLastRead('messages');
+    // Mark as read at the date of the most recent message, and not "now":
+    // messages posted since last refresh must stay unread.
+    const lastDate = mostRecentDate(state.messages ?? [], entry => entry.message.createdAt);
+
+    await setLastRead('messages', lastDate ?? new Date());
 
     // Messages stay displayed, but grayed. They will disappear on next refresh.
     renderTable(state.messages);
