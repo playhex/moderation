@@ -46,7 +46,7 @@ function renderList(actions) {
 
   const rows = actions.map(a => {
     const chatActive = a.chatBlockedUntil && new Date(a.chatBlockedUntil) > now;
-    const avatarActive = a.avatarBlockedUntil && new Date(a.avatarBlockedUntil) > now;
+    const contentActive = a.anyContentBlockedUntil && new Date(a.anyContentBlockedUntil) > now;
 
     const badges = [];
     if (a.chatBlockedUntil) {
@@ -54,10 +54,10 @@ function renderList(actions) {
         ? `<span class="badge text-bg-danger">Chat blocked</span>`
         : `<span class="badge text-bg-secondary">Chat block (expired)</span>`);
     }
-    if (a.avatarBlockedUntil) {
-      badges.push(avatarActive
-        ? `<span class="badge text-bg-danger">Avatar blocked</span>`
-        : `<span class="badge text-bg-secondary">Avatar block (expired)</span>`);
+    if (a.anyContentBlockedUntil) {
+      badges.push(contentActive
+        ? `<span class="badge text-bg-danger">Any content blocked</span>`
+        : `<span class="badge text-bg-secondary">Any content block (expired)</span>`);
     }
     if (a.nicknameModerated) {
       badges.push(`<span class="badge text-bg-warning text-dark">Nickname</span>`);

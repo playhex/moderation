@@ -1,6 +1,12 @@
 # PlayHex moderation
 
-List last chat messages and nicknames, take moderation action to moderate a chat message and/or block player chat.
+Moderation and admin tool for a PlayHex instance:
+
+- **Moderation**: review last chat messages, new accounts, avatars, submitted videos (accept/refuse) and puzzles (put back as draft),
+  then take moderation action: warn player, block chat, block any content (avatar, puzzles, videos, tournaments...), ban IPs.
+- **Admin**: tournaments featuring.
+
+Pages are listed in the sidebar, see `SECTIONS` in `js/nav.js` to add one.
 
 ## Install
 
@@ -20,7 +26,7 @@ Now you can moderate your PlayHex instance, logins are:
 - **API base Url**: your PlayHex instance (e.g `http://localhost:3001`)
 - **Moderator API key**: your moderator password from .env (e.g `myPassword`)
 
-Dates when messages, new accounts and avatars have been marked as seen are stored on the server
+Dates when messages, new accounts, avatars, videos and puzzles have been marked as seen are stored on the server
 (and no longer in the browser local storage), so they stay synchronized between all your devices.
 
 On the "Tournaments featuring" page, editing or canceling a tournament goes through the admin API,
@@ -33,7 +39,7 @@ All last chat messages from any are listed, so moderators can easily review all 
 ![Last messages list](screenshots/last-messages.png)
 
 If a message needs moderation action, moderator can display a warning to the player with the moderation reason,
-and also block player chat for a period. Past warning and chat blocks are also displayed to the moderator.
+and also block player chat for a period, or block player from posting any content (avatar, puzzles, videos, tournaments...). Past warning and chat blocks are also displayed to the moderator.
 
 ![Last messages list](screenshots/take-action.png)
 

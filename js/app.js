@@ -5,6 +5,8 @@ import { renderMessages } from './messages.js';
 import { renderPlayers } from './players.js';
 import { renderAction } from './action.js';
 import { renderAvatars } from './avatars.js';
+import { renderVideos } from './videos.js';
+import { renderPuzzles } from './puzzles.js';
 import { renderHistory } from './history.js';
 import { renderTournaments } from './tournaments.js';
 import { refreshAllCounts } from './counts.js';
@@ -38,6 +40,8 @@ async function render() {
     case 'players':  await renderPlayers(); break;
     case 'action':   await renderAction(params); break;
     case 'avatars':  await renderAvatars(); break;
+    case 'videos':   await renderVideos(); break;
+    case 'puzzles':  await renderPuzzles(); break;
     case 'history':  await renderHistory(); break;
     case 'tournaments': await renderTournaments(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');

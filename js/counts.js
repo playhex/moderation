@@ -23,11 +23,27 @@ async function refreshAvatars() {
   setTabCount('avatars', lastRead ? players.filter(p => new Date(p.avatarUpdatedAt) > lastRead).length : players.length);
 }
 
+async function refreshVideos() {
+  const videos = state.videos ?? await api('GET', '/api/admin/moderation/videos');
+  state.videos = videos;
+  const lastRead = getLastRead('videos');
+  setTabCount('videos', lastRead ? videos.filter(v => new Date(v.createdAt) > lastRead).length : videos.length);
+}
+
+async function refreshPuzzles() {
+  const puzzles = state.puzzles ?? await api('GET', '/api/admin/moderation/puzzles');
+  state.puzzles = puzzles;
+  const lastRead = getLastRead('puzzles');
+  setTabCount('puzzles', lastRead ? puzzles.filter(p => new Date(p.updatedAt) > lastRead).length : puzzles.length);
+}
+
 export async function refreshAllCounts(path) {
   await Promise.all([
     refreshMessages().catch(() => {}),
     refreshPlayers().catch(() => {}),
     refreshAvatars().catch(() => {}),
+    refreshVideos().catch(() => {}),
+    refreshPuzzles().catch(() => {}),
   ]);
   pageNav(path);
 }

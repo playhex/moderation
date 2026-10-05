@@ -45,6 +45,7 @@ export const REASONS = {
   'moderation_reason.chat_insults': 'Insults or inappropriate behavior in chat',
   'moderation_reason.avatar_inappropriate': 'Inappropriate avatar image',
   'moderation_reason.nickname_inappropriate': 'Inappropriate nickname',
+  'moderation_reason.content_inappropriate': 'Inappropriate content (puzzle, video, tournament...)',
 };
 
 export function getRoute() {

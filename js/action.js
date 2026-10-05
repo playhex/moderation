@@ -1,9 +1,10 @@
 import { state, api } from './api.js';
 import { esc, relativeTime, formatDate, navigate, REASONS } from './utils.js';
-import { updateNav } from './nav.js';
+import { updateNav, pageNav } from './nav.js';
 
 export async function renderAction(params) {
   updateNav();
+  pageNav();
 
   const playerPublicId = params.get('player');
   const fromMessageId = params.get('message');
@@ -12,11 +13,19 @@ export async function renderAction(params) {
 
   document.getElementById('app').innerHTML = `
     <div class="mb-3">
-      <a href="#/messages">← Back to messages</a>
+      <a href="#/messages" id="link-back">← Back</a>
     </div>
     <div id="action-body">
       <div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>
     </div>`;
+
+  // Back to previous page (messages, avatars, videos, puzzles...), or messages if opened directly
+  document.getElementById('link-back').addEventListener('click', e => {
+    if (history.length > 1) {
+      e.preventDefault();
+      history.back();
+    }
+  });
 
   try {
     const [player, pastActions, allMessages, playerIps] = await Promise.all([
@@ -45,7 +54,7 @@ function renderPastActions(actions) {
 
   return actions.map(a => {
     const chatActive = a.chatBlockedUntil && new Date(a.chatBlockedUntil) > now;
-    const avatarActive = a.avatarBlockedUntil && new Date(a.avatarBlockedUntil) > now;
+    const contentActive = a.anyContentBlockedUntil && new Date(a.anyContentBlockedUntil) > now;
     const ipBanActive = a.ipBannedUntil && new Date(a.ipBannedUntil) > now;
     const badges = [];
     if (a.chatBlockedUntil) {
@@ -53,10 +62,10 @@ function renderPastActions(actions) {
         ? `<span class="badge text-bg-danger">Chat blocked until ${formatDate(a.chatBlockedUntil)}</span>`
         : `<span class="badge text-bg-secondary">Chat blocked (expired ${formatDate(a.chatBlockedUntil)})</span>`);
     }
-    if (a.avatarBlockedUntil) {
-      badges.push(avatarActive
-        ? `<span class="badge text-bg-danger">Avatar blocked until ${formatDate(a.avatarBlockedUntil)}</span>`
-        : `<span class="badge text-bg-secondary">Avatar blocked (expired ${formatDate(a.avatarBlockedUntil)})</span>`);
+    if (a.anyContentBlockedUntil) {
+      badges.push(contentActive
+        ? `<span class="badge text-bg-danger">Any content blocked until ${formatDate(a.anyContentBlockedUntil)}</span>`
+        : `<span class="badge text-bg-secondary">Any content blocked (expired ${formatDate(a.anyContentBlockedUntil)})</span>`);
     }
     if (a.ipBannedUntil) {
       badges.push(ipBanActive
@@ -200,8 +209,8 @@ function renderForm(player, pastActions, playerMessages, fromMessageId, playerIp
               <label class="form-check-label" for="radio-block">Block chat until…</label>
             </div>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="actionType" id="radio-avatar-block" value="avatar-block">
-              <label class="form-check-label" for="radio-avatar-block">Block avatar until…</label>
+              <input class="form-check-input" type="radio" name="actionType" id="radio-content-block" value="content-block">
+              <label class="form-check-label" for="radio-content-block">Block any content until…</label>
             </div>
             <div class="form-check form-check-inline">
               <input class="form-check-input" type="radio" name="actionType" id="radio-ip-ban" value="ip-ban">
@@ -212,9 +221,12 @@ function renderForm(player, pastActions, playerMessages, fromMessageId, playerIp
             <label class="form-label" for="input-block-until">Block chat until</label>
             <input id="input-block-until" type="date" class="form-control" style="max-width:280px">
           </div>
-          <div id="avatar-date-picker-group" class="mb-3 d-none">
-            <label class="form-label" for="input-avatar-block-until">Block avatar until <span class="text-muted small">(current avatar will be deleted)</span></label>
-            <input id="input-avatar-block-until" type="date" class="form-control" style="max-width:280px">
+          <div id="content-date-picker-group" class="mb-3 d-none">
+            <label class="form-label" for="input-content-block-until">
+              Block any content until
+              <span class="text-muted small">(cannot upload avatar, create or edit puzzles, videos, tournaments… Current avatar will be deleted)</span>
+            </label>
+            <input id="input-content-block-until" type="date" class="form-control" style="max-width:280px">
           </div>
           <div id="ip-ban-date-picker-group" class="mb-3 d-none">
             <label class="form-label" for="input-ip-ban-until">Ban all known IPs until <span class="text-muted small">(blocks connection from all known IPs)</span></label>
@@ -239,7 +251,7 @@ function renderForm(player, pastActions, playerMessages, fromMessageId, playerIp
 
   const hideDatePickers = () => {
     document.getElementById('date-picker-group').classList.add('d-none');
-    document.getElementById('avatar-date-picker-group').classList.add('d-none');
+    document.getElementById('content-date-picker-group').classList.add('d-none');
     document.getElementById('ip-ban-date-picker-group').classList.add('d-none');
   };
 
@@ -250,9 +262,9 @@ function renderForm(player, pastActions, playerMessages, fromMessageId, playerIp
     document.getElementById('date-picker-group').classList.remove('d-none');
   });
 
-  document.getElementById('radio-avatar-block').addEventListener('change', () => {
+  document.getElementById('radio-content-block').addEventListener('change', () => {
     hideDatePickers();
-    document.getElementById('avatar-date-picker-group').classList.remove('d-none');
+    document.getElementById('content-date-picker-group').classList.remove('d-none');
   });
 
   document.getElementById('radio-ip-ban').addEventListener('change', () => {
@@ -267,10 +279,10 @@ async function submitAction(playerPublicId, playerPseudo) {
   const reason = document.getElementById('input-reason').value || null;
   const reasonDetails = document.getElementById('input-details').value.trim() || null;
   const isBlock = document.getElementById('radio-block').checked;
-  const isAvatarBlock = document.getElementById('radio-avatar-block').checked;
+  const isContentBlock = document.getElementById('radio-content-block').checked;
   const isIpBan = document.getElementById('radio-ip-ban').checked;
   const blockUntilInput = document.getElementById('input-block-until')?.value;
-  const avatarBlockUntilInput = document.getElementById('input-avatar-block-until')?.value;
+  const contentBlockUntilInput = document.getElementById('input-content-block-until')?.value;
   const ipBanUntilInput = document.getElementById('input-ip-ban-until')?.value;
   const resultEl = document.getElementById('action-result');
 
@@ -279,8 +291,8 @@ async function submitAction(playerPublicId, playerPseudo) {
     return;
   }
 
-  if (isAvatarBlock && !avatarBlockUntilInput) {
-    resultEl.innerHTML = '<div class="alert alert-danger">Please pick an avatar block-until date.</div>';
+  if (isContentBlock && !contentBlockUntilInput) {
+    resultEl.innerHTML = '<div class="alert alert-danger">Please pick a content block-until date.</div>';
     return;
   }
 
@@ -300,7 +312,7 @@ async function submitAction(playerPublicId, playerPseudo) {
       reason,
       reasonDetails,
       chatBlockedUntil: isBlock ? new Date(blockUntilInput).toISOString() : undefined,
-      avatarBlockedUntil: isAvatarBlock ? new Date(avatarBlockUntilInput).toISOString() : undefined,
+      anyContentBlockedUntil: isContentBlock ? new Date(contentBlockUntilInput).toISOString() : undefined,
       ipBannedUntil: isIpBan ? new Date(ipBanUntilInput).toISOString() : undefined,
       relatedChatMessages,
       moderateNickname: moderateNicknameChecked ? playerPseudo : undefined,

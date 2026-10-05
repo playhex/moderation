@@ -21,8 +21,10 @@ export async function renderPlayers() {
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
     state.messages = null;
-      state.players = null;
+    state.players = null;
     state.avatars = null;
+    state.videos = null;
+    state.puzzles = null;
     state.history = null;
     document.getElementById('players-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';

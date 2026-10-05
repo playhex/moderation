@@ -2,6 +2,8 @@ export const state = {
   apiBase: localStorage.getItem('apiBase') || 'http://localhost:3000',
   apiKey: localStorage.getItem('apiKey') || '',
   messages: null,
+  videos: null,
+  puzzles: null,
   history: null,
   tournaments: null,
 
