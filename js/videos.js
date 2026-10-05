@@ -116,8 +116,8 @@ function renderList(videos) {
           <dd class="col-sm-9 mb-1">${v.keywords ? userText(v.keywords) : '<span class="text-muted">—</span>'}</dd>
           <dt class="col-sm-3 text-muted fw-normal">Link</dt>
           <dd class="col-sm-9 mb-1 text-break"><code>${esc(v.url)}</code></dd>
-          <dt class="col-sm-3 text-muted fw-normal">Duration, languages</dt>
-          <dd class="col-sm-9 mb-1">${esc(formatDuration(v.durationSeconds) ?? '—')}, ${esc((v.languages ?? []).join(', '))}</dd>
+          <dt class="col-sm-3 text-muted fw-normal">Duration, published</dt>
+          <dd class="col-sm-9 mb-1">${esc(formatDuration(v.durationSeconds) ?? '—')}, ${esc(v.publishedAt ? v.publishedAt.substring(0, 10) : '—')}</dd>
           <dt class="col-sm-3 text-muted fw-normal">Submitted by</dt>
           <dd class="col-sm-9 mb-1">
             ${submitter}
