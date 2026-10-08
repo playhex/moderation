@@ -10,6 +10,7 @@ export function updateNav() {
     // No navigation when logged out
     document.getElementById('sidebar').classList.add('d-none');
     document.getElementById('btn-sidebar-toggle').classList.add('d-none');
+    document.getElementById('btn-next').classList.add('d-none');
     return;
   }
 
@@ -73,12 +74,35 @@ export function pageNav(active = null) {
         </li>`).join('')}
     </ul>`).join('');
 
+  nextButton(active);
+
   // On small screens, close sidebar once a page is chosen
   document.querySelectorAll('#nav-tabs a').forEach(link => link.addEventListener('click', () => {
     window.bootstrap?.Offcanvas.getInstance(document.getElementById('sidebar'))?.hide();
   }));
 }
 
+/**
+ * Mobile shortcut, since sidebar badges are hidden in the offcanvas:
+ * links to the next page having items to check, with the total number of such pages.
+ */
+function nextButton(active) {
+  const btn = document.getElementById('btn-next');
+  const tabs = SECTIONS.flatMap(s => s.entries).filter(e => e.seen).map(e => e.tab);
+  const i = tabs.indexOf(active);
+  // Pages after current one first, current page last
+  const pending = [...tabs.slice(i + 1), ...tabs.slice(0, i + 1)]
+    .filter(tab => getTabCount(tab));
+
+  if (!pending.length) {
+    btn.classList.add('d-none');
+    return;
+  }
+
+  btn.href = `#/${pending[0]}`;
+  btn.innerHTML = `Next <span class="badge rounded-pill text-bg-danger">${pending.length}</span>`;
+  btn.classList.remove('d-none');
+}
 
 export function logout() {
   localStorage.removeItem('apiKey');
