@@ -26,6 +26,7 @@ export async function renderMessages() {
     state.avatars = null;
     state.videos = null;
     state.puzzles = null;
+    state.automaticActions = null;
     document.getElementById('msg-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadMessages();

@@ -72,7 +72,13 @@ function renderPastActions(actions) {
         ? `<span class="badge" style="background-color:#6f42c1">IPs banned until ${formatDate(a.ipBannedUntil)}</span>`
         : `<span class="badge text-bg-secondary">IPs banned (expired ${formatDate(a.ipBannedUntil)})</span>`);
     }
-    const badge = badges.length ? badges.join(' ') : `<span class="badge text-bg-warning text-dark">Warning</span>`;
+    if (!badges.length) {
+      badges.push(`<span class="badge text-bg-warning text-dark">Warning</span>`);
+    }
+    if (a.automatic) {
+      badges.push(`<span class="badge text-bg-info">Auto</span>`);
+    }
+    const badge = badges.join(' ');
     const ack = a.acknowledgedAt
       ? `<span class="text-muted small">Acknowledged ${formatDate(a.acknowledgedAt)}</span>`
       : `<span class="text-warning small">Not yet acknowledged</span>`;
@@ -89,8 +95,8 @@ function renderPastActions(actions) {
       ${a.relatedChatMessages?.length ? `
         <ul class="list-unstyled mt-2 mb-0 border-top pt-2">
           ${a.relatedChatMessages.map(m => {
-            const gameLink = m.hostedGame
-              ? `<a href="${esc(state.apiBase)}/games/${esc(m.hostedGame.publicId)}" target="_blank">${esc(m.hostedGame.publicId.slice(0, 8))}…</a>`
+            const gameLink = m.game
+              ? `<a href="${esc(state.apiBase)}/games/${esc(m.game.publicId)}" target="_blank">${esc(m.game.publicId.slice(0, 8))}…</a>`
               : '';
             return `<li class="text-muted"><span class="me-1">${gameLink}</span>${esc(m.content)}</li>`;
           }).join('')}

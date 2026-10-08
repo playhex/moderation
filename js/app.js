@@ -8,6 +8,7 @@ import { renderAvatars } from './avatars.js';
 import { renderVideos } from './videos.js';
 import { renderPuzzles } from './puzzles.js';
 import { renderHistory } from './history.js';
+import { renderAutomaticActions } from './automatic-actions.js';
 import { renderTournaments } from './tournaments.js';
 import { refreshAllCounts } from './counts.js';
 
@@ -43,6 +44,7 @@ async function render() {
     case 'videos':   await renderVideos(); break;
     case 'puzzles':  await renderPuzzles(); break;
     case 'history':  await renderHistory(); break;
+    case 'automatic-actions': await renderAutomaticActions(); break;
     case 'tournaments': await renderTournaments(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
   }

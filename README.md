@@ -2,7 +2,8 @@
 
 Moderation and admin tool for a PlayHex instance:
 
-- **Moderation**: review last chat messages, new accounts, avatars, submitted videos (accept/refuse) and puzzles (put back as draft),
+- **Moderation**: review last chat messages, new accounts, avatars, submitted videos (accept/refuse), puzzles (put back as draft)
+  and auto moderated players (restricted by the server for posting forbidden words in chat, can be canceled if false positive),
   then take moderation action: warn player, block chat, block any content (avatar, puzzles, videos, tournaments...), ban IPs.
 - **Admin**: tournaments featuring.
 
@@ -26,7 +27,7 @@ Now you can moderate your PlayHex instance, logins are:
 - **API base Url**: your PlayHex instance (e.g `http://localhost:3001`)
 - **Moderator API key**: your moderator password from .env (e.g `myPassword`)
 
-Dates when messages, new accounts, avatars, videos and puzzles have been marked as seen are stored on the server
+Dates when messages, new accounts, avatars, videos, puzzles and auto moderated players have been marked as seen are stored on the server
 (and no longer in the browser local storage), so they stay synchronized between all your devices.
 
 On the "Tournaments featuring" page, editing or canceling a tournament goes through the admin API,

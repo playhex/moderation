@@ -25,6 +25,7 @@ export async function renderPlayers() {
     state.avatars = null;
     state.videos = null;
     state.puzzles = null;
+    state.automaticActions = null;
     state.history = null;
     document.getElementById('players-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';

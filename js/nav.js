@@ -36,6 +36,7 @@ const SECTIONS = [
       { tab: 'avatars', label: 'Avatars', seen: true },
       { tab: 'videos', label: 'Videos', seen: true },
       { tab: 'puzzles', label: 'Puzzles', seen: true },
+      { tab: 'automatic-actions', label: 'Auto Moderated', seen: true },
       { tab: 'history', label: 'Last moderation actions' },
     ],
   },
@@ -88,6 +89,7 @@ export function logout() {
   state.videos = null;
   state.puzzles = null;
   state.history = null;
+  state.automaticActions = null;
   state.tournaments = null;
   state.seen = null;
   state.countsInitialized = false;

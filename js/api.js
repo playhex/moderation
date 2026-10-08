@@ -5,6 +5,7 @@ export const state = {
   videos: null,
   puzzles: null,
   history: null,
+  automaticActions: null,
   tournaments: null,
 
   /** Dates when each tab has been marked as seen, loaded from server. Like: { messages: '2026-09-08T…', … } */

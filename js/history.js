@@ -71,6 +71,9 @@ function renderList(actions) {
     if (!badges.length) {
       badges.push(`<span class="badge text-bg-warning text-dark">Warning</span>`);
     }
+    if (a.automatic) {
+      badges.push(`<span class="badge text-bg-info">Auto</span>`);
+    }
 
     const playerName = a.player
       ? `<a href="#/action?player=${esc(a.player.publicId)}">${esc(a.player.pseudo)}</a>`

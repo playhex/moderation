@@ -37,6 +37,13 @@ async function refreshPuzzles() {
   setTabCount('puzzles', lastRead ? puzzles.filter(p => new Date(p.updatedAt) > lastRead).length : puzzles.length);
 }
 
+async function refreshAutomaticActions() {
+  const actions = state.automaticActions ?? await api('GET', '/api/admin/moderation/automatic-actions');
+  state.automaticActions = actions;
+  const lastRead = getLastRead('automatic-actions');
+  setTabCount('automatic-actions', lastRead ? actions.filter(a => new Date(a.createdAt) > lastRead).length : actions.length);
+}
+
 export async function refreshAllCounts(path) {
   await Promise.all([
     refreshMessages().catch(() => {}),
@@ -44,6 +51,7 @@ export async function refreshAllCounts(path) {
     refreshAvatars().catch(() => {}),
     refreshVideos().catch(() => {}),
     refreshPuzzles().catch(() => {}),
+    refreshAutomaticActions().catch(() => {}),
   ]);
   pageNav(path);
 }
