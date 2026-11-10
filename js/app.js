@@ -10,6 +10,7 @@ import { renderPuzzles } from './puzzles.js';
 import { renderHistory } from './history.js';
 import { renderAutomaticActions } from './automatic-actions.js';
 import { renderTournaments } from './tournaments.js';
+import { renderFeatureUsage } from './feature-usage.js';
 import { refreshAllCounts } from './counts.js';
 
 async function initCounts(path) {
@@ -46,6 +47,7 @@ async function render() {
     case 'history':  await renderHistory(); break;
     case 'automatic-actions': await renderAutomaticActions(); break;
     case 'tournaments': await renderTournaments(); break;
+    case 'feature-usage': await renderFeatureUsage(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
   }
 

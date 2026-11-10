@@ -7,6 +7,7 @@ export const state = {
   history: null,
   automaticActions: null,
   tournaments: null,
+  featureUsage: null,
 
   /** Dates when each tab has been marked as seen, loaded from server. Like: { messages: '2026-09-08T…', … } */
   seen: null,

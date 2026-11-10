@@ -45,6 +45,7 @@ const SECTIONS = [
     title: 'Admin',
     entries: [
       { tab: 'tournaments', label: 'Tournaments featuring' },
+      { tab: 'feature-usage', label: 'Feature usage' },
     ],
   },
 ];
@@ -115,6 +116,7 @@ export function logout() {
   state.history = null;
   state.automaticActions = null;
   state.tournaments = null;
+  state.featureUsage = null;
   state.seen = null;
   state.countsInitialized = false;
   navigate('login');
