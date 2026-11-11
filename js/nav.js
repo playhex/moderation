@@ -46,6 +46,7 @@ const SECTIONS = [
     entries: [
       { tab: 'tournaments', label: 'Tournaments featuring' },
       { tab: 'feature-usage', label: 'Feature usage' },
+      { tab: 'live-lobby', label: 'Live lobby' },
     ],
   },
 ];
@@ -117,6 +118,7 @@ export function logout() {
   state.automaticActions = null;
   state.tournaments = null;
   state.featureUsage = null;
+  state.liveLobby = null;
   state.seen = null;
   state.countsInitialized = false;
   navigate('login');

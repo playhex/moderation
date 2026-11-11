@@ -11,6 +11,7 @@ import { renderHistory } from './history.js';
 import { renderAutomaticActions } from './automatic-actions.js';
 import { renderTournaments } from './tournaments.js';
 import { renderFeatureUsage } from './feature-usage.js';
+import { renderLiveLobby } from './live-lobby.js';
 import { refreshAllCounts } from './counts.js';
 
 async function initCounts(path) {
@@ -48,6 +49,7 @@ async function render() {
     case 'automatic-actions': await renderAutomaticActions(); break;
     case 'tournaments': await renderTournaments(); break;
     case 'feature-usage': await renderFeatureUsage(); break;
+    case 'live-lobby': await renderLiveLobby(); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
   }
 

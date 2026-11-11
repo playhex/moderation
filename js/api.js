@@ -9,6 +9,9 @@ export const state = {
   tournaments: null,
   featureUsage: null,
 
+  /** Live lobby history, by scale (day, week, month) */
+  liveLobby: null,
+
   /** Dates when each tab has been marked as seen, loaded from server. Like: { messages: '2026-09-08T…', … } */
   seen: null,
 };
