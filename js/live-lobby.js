@@ -29,6 +29,15 @@ const STYLE = `<style>
   .lobby-ticks span { position: absolute; transform: translateX(-50%); font-size: 0.7rem; color: var(--bs-secondary-color); white-space: nowrap; }
   .lobby-table td, .lobby-table th { vertical-align: middle; white-space: nowrap; }
   .lobby-table td.bar-cell, .lobby-table th.bar-cell { width: 100%; white-space: normal; }
+  .join-history { width: auto; }
+  .join-history th, .join-history td { border: none; padding: 1px; text-align: center; white-space: nowrap; min-width: 2.6rem; }
+  .join-history thead th { font-size: 0.7rem; line-height: 1.1; vertical-align: bottom; }
+  .join-history td.cell { background-color: var(--bs-secondary-bg); font-size: 0.75rem; }
+  .join-history td.global { font-weight: 600; }
+  .join-history td.n-cell { font-size: 0.7rem; }
+  .join-history .label-col { position: sticky; left: 0; z-index: 1; background: var(--bs-body-bg); text-align: left; padding-right: 0.5rem; min-width: 4.5rem; }
+  .join-history .biased { opacity: 0.4; }
+  .join-history tr.average-row > * { border-top: 2px solid var(--bs-border-color); }
 </style>`;
 
 export async function renderLiveLobby() {
@@ -52,15 +61,186 @@ export async function renderLiveLobby() {
       Live games (initial time &lt; 1 day) against a player, open to anyone in lobby, not tournament or ladder matches, nor rematches.
       Green: at least one game waiting for an opponent. Stats are about games created during the period.
     </p>
-    <div id="live-lobby-body">${SPINNER}</div>`;
+    <div id="live-lobby-body">${SPINNER}</div>
+    <h5 class="mt-4">Chances to be joined within first minute</h5>
+    <p class="small text-muted">
+      By week, average over the last 4 weeks, by 4 hours slots in local time, most recent on the right.
+      Kaplan-Meier estimation, like on the statistics page: canceled games only tell that host waited at least until cancel.
+      Greener means easier to get joined, relatively to the whole table.
+      In parentheses: less than ${JOIN_HISTORY_MIN_GAMES} games, not reliable.
+    </p>
+    <div id="join-history-body">${SPINNER}</div>`;
 
   document.getElementById('btn-refresh').addEventListener('click', async () => {
     state.liveLobby = null;
     document.getElementById('live-lobby-body').innerHTML = SPINNER;
-    await loadLiveLobby(scale);
+    document.getElementById('join-history-body').innerHTML = SPINNER;
+    await Promise.all([loadLiveLobby(scale), loadJoinHistory()]);
   });
 
-  await loadLiveLobby(scale);
+  await Promise.all([loadLiveLobby(scale), loadJoinHistory()]);
+}
+
+const FIRST_MINUTE_MS = 60 * 1000;
+const WEEK_MS = 7 * 86400 * 1000;
+const JOIN_HISTORY_ROLLING_WEEKS = 4;
+const JOIN_HISTORY_SLOT_HOURS = 4;
+const JOIN_HISTORY_MIN_GAMES = 10;
+
+/**
+ * Before this date, canceled games had no endedAt, so they are missing from history,
+ * and only accepted games were counted: join chances are overestimated.
+ */
+const CANCELED_GAMES_TRACKED_SINCE = new Date('2025-09-18T12:00:00Z').getTime();
+
+/**
+ * Join chances history, as much as server allows (server limits history depth).
+ */
+async function loadJoinHistory() {
+  const body = document.getElementById('join-history-body');
+
+  try {
+    state.liveLobby ??= {};
+    const data = state.liveLobby.all
+      ?? await api('GET', `/api/admin/live-lobby-history?since=${encodeURIComponent(new Date('2020-01-01').toISOString())}`);
+    state.liveLobby.all = data;
+
+    body.innerHTML = renderJoinHistory(data.games);
+
+    // Show most recent weeks first
+    const scroll = body.querySelector('.join-history-scroll');
+    if (scroll) scroll.scrollLeft = scroll.scrollWidth;
+  } catch (e) {
+    body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`;
+  }
+}
+
+/**
+ * Probability to be joined within first minute.
+ * Kaplan-Meier estimator, canceled games are censored.
+ *
+ * @param {[number, 0|1][]} waits [wait duration in ms, 1 if joined else 0 if canceled]
+ */
+function firstMinuteJoinChance(waits) {
+  const sorted = [...waits].sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  let atRisk = sorted.length;
+  let survival = 1;
+  let i = 0;
+
+  while (i < sorted.length && sorted[i][0] <= FIRST_MINUTE_MS) {
+    const t = sorted[i][0];
+    let joined = 0;
+    let canceled = 0;
+
+    for (; i < sorted.length && sorted[i][0] === t; ++i) {
+      if (sorted[i][1] === 1) ++joined;
+      else ++canceled;
+    }
+
+    if (joined > 0) survival *= 1 - joined / atRisk;
+    atRisk -= joined + canceled;
+  }
+
+  return 1 - survival;
+}
+
+function mondayOf(ms) {
+  const date = new Date(ms);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - (date.getDay() + 6) % 7);
+
+  return date;
+}
+
+function renderJoinHistory(games) {
+  if (games.length === 0) {
+    return '<p class="text-muted">No data.</p>';
+  }
+
+  const slotsCount = 24 / JOIN_HISTORY_SLOT_HOURS;
+  const rows = [];
+
+  // First row once we have enough weeks of data, last row is current week
+  const firstWeek = mondayOf(games[0][0]);
+  firstWeek.setDate(firstWeek.getDate() + 7 * (JOIN_HISTORY_ROLLING_WEEKS - 1));
+
+  for (let week = mondayOf(Date.now()); week >= firstWeek; week = new Date(week.getFullYear(), week.getMonth(), week.getDate() - 7)) {
+    const end = new Date(week.getFullYear(), week.getMonth(), week.getDate() + 7).getTime();
+    const start = new Date(week.getFullYear(), week.getMonth(), week.getDate() - 7 * (JOIN_HISTORY_ROLLING_WEEKS - 1)).getTime();
+    const slots = Array.from({ length: slotsCount }, () => []);
+    const all = [];
+
+    for (const [createdAt, closedAt, accepted] of games) {
+      if (createdAt < start || createdAt >= end) continue;
+
+      const wait = [Math.max(0, closedAt - createdAt), accepted];
+      slots[Math.floor(new Date(createdAt).getHours() / JOIN_HISTORY_SLOT_HOURS)].push(wait);
+      all.push(wait);
+    }
+
+    rows.push({
+      week,
+      biased: start < CANCELED_GAMES_TRACKED_SINCE,
+      slots: slots.map(waits => ({ n: waits.length, chance: waits.length ? firstMinuteJoinChance(waits) : null })),
+      global: { n: all.length, chance: all.length ? firstMinuteJoinChance(all) : null },
+    });
+  }
+
+  // Color scale relative to the whole table, reliable cells only, to see evolution over time
+  const reliable = rows
+    .filter(row => !row.biased)
+    .flatMap(row => row.slots)
+    .filter(cell => cell.n >= JOIN_HISTORY_MIN_GAMES)
+    .map(cell => cell.chance);
+  const min = reliable.length ? Math.min(...reliable) : 0;
+  const max = reliable.length ? Math.max(...reliable) : 1;
+
+  const cell = ({ n, chance }, className = '') => {
+    if (chance === null) {
+      return `<td class="cell ${className}"><span class="text-muted">—</span></td>`;
+    }
+
+    const percent = `${Math.round(chance * 100)}%`;
+    const ratio = max === min ? 0.5 : Math.min(1, Math.max(0, (chance - min) / (max - min)));
+    const alpha = (0.08 + 0.72 * ratio).toFixed(3);
+    const reliableCell = n >= JOIN_HISTORY_MIN_GAMES;
+
+    return `<td class="cell ${className}" style="background-color: rgba(var(--bs-success-rgb), ${alpha})" title="${n} games">${reliableCell ? percent : `<span class="text-muted">(${percent})</span>`}</td>`;
+  };
+
+  const hasBiased = rows.some(row => row.biased);
+
+  // Oldest week on the left, most recent on the right
+  const columns = [...rows].reverse();
+  const biasedClass = row => row.biased ? 'biased' : '';
+
+  return `<div class="table-responsive join-history-scroll">
+    <table class="table table-sm join-history small mb-1">
+      <thead>
+        <tr>
+          <th class="label-col"></th>
+          ${columns.map(row => `<th class="text-muted fw-normal ${biasedClass(row)}" title="${esc(row.week.toLocaleDateString(undefined, { dateStyle: 'full' }))}">
+            ${esc(String(row.week.getDate()))}<br>${esc(row.week.toLocaleDateString(undefined, { month: 'short' }))}${row.biased ? '*' : ''}
+          </th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${Array.from({ length: slotsCount }, (_, i) => `<tr>
+          <th class="label-col text-muted fw-normal">${i * JOIN_HISTORY_SLOT_HOURS}h</th>
+          ${columns.map(row => cell(row.slots[i], biasedClass(row))).join('')}
+        </tr>`).join('')}
+        <tr class="average-row">
+          <th class="label-col">Average</th>
+          ${columns.map(row => cell(row.global, `global ${biasedClass(row)}`)).join('')}
+        </tr>
+        <tr>
+          <th class="label-col text-muted fw-normal" title="Games over the ${JOIN_HISTORY_ROLLING_WEEKS} weeks">Games</th>
+          ${columns.map(row => `<td class="text-muted n-cell ${biasedClass(row)}">${row.global.n}</td>`).join('')}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  ${hasBiased ? `<p class="small text-muted">* Overestimated: canceled games were not tracked before ${esc(new Date(CANCELED_GAMES_TRACKED_SINCE).toLocaleDateString())}, only accepted games were counted.</p>` : ''}`;
 }
 
 async function loadLiveLobby(scale) {
