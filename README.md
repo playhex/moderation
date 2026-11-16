@@ -7,7 +7,8 @@ Moderation and admin tool for a PlayHex instance:
   anti-cheat similar position flags (positions too similar to a playing game submitted to Hexplorer or a strong bot, with flagger IPs and when it happened between the flagged game moves),
   then take moderation action: warn player, block chat, block any content (avatar, puzzles, videos, tournaments...), ban IPs.
 - **Admin**: tournaments featuring, feature usage stats (how many players use pronouns, avatars, linked accounts, studies...),
-  live lobby history (when live games are waiting for an opponent, how many are accepted or canceled, and after how long).
+  stats on last 2 years by day, week or 28 days (activity, acquisition and activation, retention, lobby and games quality),
+  and live lobby history (when live games are waiting for an opponent, how many are accepted or canceled, and after how long).
 
 Pages are listed in the sidebar, see `SECTIONS` in `js/nav.js` to add one.
 
@@ -32,7 +33,7 @@ Now you can moderate your PlayHex instance, logins are:
 Dates when messages, new accounts, avatars, videos, puzzles and auto moderated players have been marked as seen are stored on the server
 (and no longer in the browser local storage), so they stay synchronized between all your devices.
 
-On the "Tournaments featuring" page, editing or canceling a tournament goes through the admin API (same for the "Feature usage" and "Live lobby" pages),
+On the "Tournaments featuring" page, editing or canceling a tournament goes through the admin API (same for the "Feature usage" and "Stats" pages),
 so you must be logged in with the **admin** password (`ADMIN_PASSWORD` in .env) and not the moderator one.
 
 ## Screenshots

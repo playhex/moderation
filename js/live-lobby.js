@@ -1,28 +1,35 @@
 import { state, api } from './api.js';
-import { esc, getRoute } from './utils.js';
-import { updateNav, pageNav } from './nav.js';
+import { esc } from './utils.js';
 
 /**
  * History of live games waiting for an opponent in lobby:
- * one bar per day/week/month, green when at least one game is waiting, gray otherwise,
+ * one bar per day/week/28 days, green when at least one game is waiting, gray otherwise,
  * with how many games have been accepted or canceled, and after how long.
  */
 
 const BARS_COUNT = 14;
 
-/** Accepted games stopped at this moves count or less are considered abandoned (host AFK, playing elsewhere...) */
-const ABANDONED_MAX_MOVES = 4;
-const SCALES = {
-  day: 'Day',
-  week: 'Week',
-  month: 'Month',
+/** A monday, so that 28 days periods start on monday, like stats periods */
+const PERIODS_ANCHOR = new Date(1970, 0, 5);
+
+/** Accepted games stopped before this moves count are considered abandoned (host AFK, playing elsewhere...) */
+const PLAYED_MIN_MOVES = 4;
+
+/**
+ * Bars are split in about 200 slots, colored by the part of the time with a game waiting.
+ */
+const SLOT_MS = {
+  day: 7.5 * 60 * 1000,
+  week: 3600 * 1000,
+  '28d': 3 * 3600 * 1000,
 };
+const DAY_MS = 86400 * 1000;
 
 const SPINNER = '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
 
 const STYLE = `<style>
   .lobby-bar { position: relative; height: 1.4rem; min-width: 18rem; background: var(--bs-secondary-bg); border-radius: 0.25rem; overflow: hidden; }
-  .lobby-bar .waiting { position: absolute; top: 0; bottom: 0; background: var(--bs-success); min-width: 1px; }
+  .lobby-bar .waiting { position: absolute; top: 0; bottom: 0; }
   .lobby-bar .future { position: absolute; top: 0; bottom: 0; right: 0;
     background: repeating-linear-gradient(45deg, var(--bs-body-bg) 0 4px, transparent 4px 8px); opacity: 0.7; }
   .lobby-ticks { position: relative; height: 1rem; min-width: 18rem; }
@@ -40,26 +47,14 @@ const STYLE = `<style>
   .join-history tr.average-row > * { border-top: 2px solid var(--bs-border-color); }
 </style>`;
 
-export async function renderLiveLobby() {
-  updateNav();
-  pageNav('live-lobby');
-
-  const scale = SCALES[getRoute().params.get('scale')] ? getRoute().params.get('scale') : 'day';
-
-  document.getElementById('app').innerHTML = `${STYLE}
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <h4 class="mb-0">Live lobby</h4>
-      <div class="d-flex gap-2">
-        <div class="btn-group btn-group-sm" role="group">
-          ${Object.entries(SCALES).map(([key, label]) => `
-            <a href="#/live-lobby?scale=${key}" class="btn ${key === scale ? 'btn-secondary' : 'btn-outline-secondary'}">${esc(label)}</a>`).join('')}
-        </div>
-        <button id="btn-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
-      </div>
-    </div>
+/**
+ * Live lobby section of stats page.
+ */
+export function liveLobbySectionHtml() {
+  return `${STYLE}
     <p class="small text-muted">
       Live games (initial time &lt; 1 day) against a player, open to anyone in lobby, not tournament or ladder matches, nor rematches.
-      Green: at least one game waiting for an opponent. Stats are about games created during the period.
+      Greener: more time with at least one game waiting for an opponent, by slots of 7.5 minutes (day), 1 hour (week) or 3 hours (28 days). Stats are about games created during the period. Local time.
     </p>
     <div id="live-lobby-body">${SPINNER}</div>
     <h5 class="mt-4">Chances to be joined within first minute</h5>
@@ -70,13 +65,18 @@ export async function renderLiveLobby() {
       In parentheses: less than ${JOIN_HISTORY_MIN_GAMES} games, not reliable.
     </p>
     <div id="join-history-body">${SPINNER}</div>`;
+}
 
-  document.getElementById('btn-refresh').addEventListener('click', async () => {
+/**
+ * @param {'day' | 'week' | '28d'} scale
+ * @param {boolean} reload Fetch again instead of using already loaded data
+ */
+export async function loadLiveLobbySection(scale, reload = false) {
+  if (reload) {
     state.liveLobby = null;
     document.getElementById('live-lobby-body').innerHTML = SPINNER;
     document.getElementById('join-history-body').innerHTML = SPINNER;
-    await Promise.all([loadLiveLobby(scale), loadJoinHistory()]);
-  });
+  }
 
   await Promise.all([loadLiveLobby(scale), loadJoinHistory()]);
 }
@@ -264,7 +264,7 @@ async function loadLiveLobby(scale) {
             <th class="text-end">Games</th>
             <th class="text-end">Accepted</th>
             <th class="text-end">Canceled</th>
-            <th class="text-end" title="Accepted games that stopped at ${ABANDONED_MAX_MOVES} moves or less (host AFK, playing another game...), percentage of accepted games">Abandoned<br><span class="fw-normal text-muted">≤ ${ABANDONED_MAX_MOVES} moves</span></th>
+            <th class="text-end" title="Accepted games that stopped before ${PLAYED_MIN_MOVES} moves (host AFK, playing another game...), percentage of accepted games">Abandoned<br><span class="fw-normal text-muted">&lt; ${PLAYED_MIN_MOVES} moves</span></th>
             <th class="text-end" title="Time before being accepted: average / median">Wait before accept<br><span class="fw-normal text-muted">avg / median</span></th>
             <th class="text-end" title="Time before being canceled: average / median">Wait before cancel<br><span class="fw-normal text-muted">avg / median</span></th>
           </tr>
@@ -282,7 +282,7 @@ async function loadLiveLobby(scale) {
 
 /**
  * Last BARS_COUNT periods, in local time, most recent first.
- * Weeks start on monday.
+ * Weeks and 28 days periods start on monday.
  *
  * @returns {{ start: Date, end: Date }[]}
  */
@@ -290,26 +290,22 @@ function getBuckets(scale, now) {
   const buckets = [];
   let start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  if (scale === 'week') {
-    start.setDate(start.getDate() - (start.getDay() + 6) % 7);
-  } else if (scale === 'month') {
-    start.setDate(1);
+  const days = { day: 1, week: 7, '28d': 28 }[scale];
+
+  if (days > 1) {
+    // Rounded: days may not be 24h long because of daylight saving time
+    const daysSinceAnchor = Math.round((start.getTime() - PERIODS_ANCHOR.getTime()) / DAY_MS);
+    start.setDate(start.getDate() - ((daysSinceAnchor % days) + days) % days);
   }
 
   for (let i = 0; i < BARS_COUNT; ++i) {
     const end = new Date(start);
-
-    if (scale === 'day') end.setDate(end.getDate() + 1);
-    else if (scale === 'week') end.setDate(end.getDate() + 7);
-    else end.setMonth(end.getMonth() + 1);
+    end.setDate(end.getDate() + days);
 
     buckets.push({ start, end });
 
     const previous = new Date(start);
-
-    if (scale === 'day') previous.setDate(previous.getDate() - 1);
-    else if (scale === 'week') previous.setDate(previous.getDate() - 7);
-    else previous.setMonth(previous.getMonth() - 1);
+    previous.setDate(previous.getDate() - days);
 
     start = previous;
   }
@@ -346,8 +342,15 @@ function renderRow(scale, { start, end }, games, intervals, now) {
   const length = endMs - startMs;
   const pos = t => ((t - startMs) / length * 100).toFixed(3);
 
+  // Waiting time by slot, so that short waits are not displayed bigger than they are
+  const slotMs = SLOT_MS[scale];
+  const slots = [];
+
+  for (let t = startMs; t < endMs; t += slotMs) {
+    slots.push({ from: t, to: Math.min(t + slotMs, endMs), waiting: 0, games: 0 });
+  }
+
   let waitingMs = 0;
-  const segments = [];
 
   for (const [from, to] of intervals) {
     if (to <= startMs || from >= elapsedEnd) continue;
@@ -355,9 +358,24 @@ function renderRow(scale, { start, end }, games, intervals, now) {
     const a = Math.max(from, startMs);
     const b = Math.min(to, elapsedEnd);
     waitingMs += b - a;
-    segments.push(`<div class="waiting" style="left: ${pos(a)}%; width: ${(pos(b) - pos(a)).toFixed(3)}%"
-      title="${esc(`${formatTime(from)} → ${formatTime(to)} (${formatWait(to - from)})`)}"></div>`);
+
+    for (let k = Math.floor((a - startMs) / slotMs); k < slots.length && slots[k].from < b; ++k) {
+      slots[k].waiting += Math.min(b, slots[k].to) - Math.max(a, slots[k].from);
+    }
   }
+
+  for (const [createdAt] of games) {
+    if (createdAt >= startMs && createdAt < endMs) {
+      ++slots[Math.floor((createdAt - startMs) / slotMs)].games;
+    }
+  }
+
+  const segments = slots.filter(slot => slot.waiting > 0).map(slot => {
+    const ratio = slot.waiting / (Math.min(slot.to, elapsedEnd) - slot.from);
+
+    return `<div class="waiting" style="left: ${pos(slot.from)}%; width: ${(pos(slot.to) - pos(slot.from)).toFixed(3)}%; background-color: rgba(var(--bs-success-rgb), ${ratio.toFixed(3)})"
+      title="${esc(`${formatTime(slot.from)} → ${formatTime(slot.to)}: waiting ${Math.round(ratio * 100)}% of the time (${formatWait(slot.waiting)}), ${slot.games} games created`)}"></div>`;
+  });
 
   const future = elapsedEnd < endMs
     ? `<div class="future" style="left: ${pos(elapsedEnd)}%"></div>`
@@ -366,7 +384,7 @@ function renderRow(scale, { start, end }, games, intervals, now) {
   const created = games.filter(([createdAt]) => createdAt >= startMs && createdAt < endMs);
   const acceptedWaits = created.filter(g => g[2] === 1).map(([from, to]) => to - from);
   const canceledWaits = created.filter(g => g[2] === 0).map(([from, to]) => to - from);
-  const abandoned = created.filter(g => g[2] === 1 && g[3] <= ABANDONED_MAX_MOVES).length;
+  const abandoned = created.filter(g => g[2] === 1 && g[3] < PLAYED_MIN_MOVES).length;
   const elapsed = elapsedEnd - startMs;
 
   return `<tr>
@@ -383,8 +401,7 @@ function renderRow(scale, { start, end }, games, intervals, now) {
 }
 
 /**
- * Tick labels above bars, positioned on the most recent bucket
- * (for months, length differs, so positions are approximate for other months).
+ * Tick labels above bars, positioned on the most recent bucket.
  */
 function renderTicks(scale, { start, end }) {
   const length = end.getTime() - start.getTime();
@@ -401,10 +418,10 @@ function renderTicks(scale, { start, end }) {
       ticks.push([(d + 0.5) / 7, date.toLocaleDateString(undefined, { weekday: 'short' })]);
     }
   } else {
-    for (const day of [1, 8, 15, 22, 29]) {
+    for (let w = 0; w < 4; ++w) {
       const date = new Date(start);
-      date.setDate(day);
-      ticks.push([(date.getTime() - start.getTime()) / length, String(day)]);
+      date.setDate(date.getDate() + 7 * w);
+      ticks.push([(date.getTime() - start.getTime()) / length, date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })]);
     }
   }
 
@@ -417,11 +434,7 @@ function formatBucket(scale, start) {
     return start.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   }
 
-  if (scale === 'week') {
-    return start.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-  }
-
-  return start.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  return start.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function formatTime(ms) {

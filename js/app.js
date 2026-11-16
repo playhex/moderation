@@ -11,7 +11,7 @@ import { renderHistory } from './history.js';
 import { renderAutomaticActions } from './automatic-actions.js';
 import { renderTournaments } from './tournaments.js';
 import { renderFeatureUsage } from './feature-usage.js';
-import { renderLiveLobby } from './live-lobby.js';
+import { renderStats } from './stats.js';
 import { renderSimilarPositionFlags, renderSimilarPositionFlag } from './similar-position-flags.js';
 import { refreshAllCounts } from './counts.js';
 
@@ -50,7 +50,8 @@ async function render() {
     case 'automatic-actions': await renderAutomaticActions(); break;
     case 'tournaments': await renderTournaments(); break;
     case 'feature-usage': await renderFeatureUsage(); break;
-    case 'live-lobby': await renderLiveLobby(); break;
+    case 'stats': await renderStats(); break;
+    case 'live-lobby': navigate('stats'); break;
     case 'similar-position-flags': await renderSimilarPositionFlags(); break;
     case 'similar-position-flag': await renderSimilarPositionFlag(params); break;
     default:         navigate(state.apiKey ? 'messages' : 'login');
