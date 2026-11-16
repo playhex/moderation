@@ -44,6 +44,13 @@ async function refreshAutomaticActions() {
   setTabCount('automatic-actions', lastRead ? actions.filter(a => new Date(a.createdAt) > lastRead).length : actions.length);
 }
 
+async function refreshSimilarPositionFlags() {
+  const flags = state.similarPositionFlags ?? await api('GET', '/api/admin/moderation/similar-position-flags');
+  state.similarPositionFlags = flags;
+  const lastRead = getLastRead('similar-position-flags');
+  setTabCount('similar-position-flags', lastRead ? flags.filter(f => new Date(f.createdAt) > lastRead).length : flags.length);
+}
+
 export async function refreshAllCounts(path) {
   await Promise.all([
     refreshMessages().catch(() => {}),
@@ -52,6 +59,7 @@ export async function refreshAllCounts(path) {
     refreshVideos().catch(() => {}),
     refreshPuzzles().catch(() => {}),
     refreshAutomaticActions().catch(() => {}),
+    refreshSimilarPositionFlags().catch(() => {}),
   ]);
   pageNav(path);
 }

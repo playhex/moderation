@@ -38,6 +38,7 @@ const SECTIONS = [
       { tab: 'videos', label: 'Videos', seen: true },
       { tab: 'puzzles', label: 'Puzzles', seen: true },
       { tab: 'automatic-actions', label: 'Auto Moderated', seen: true },
+      { tab: 'similar-position-flags', label: 'Similar positions', seen: true },
       { tab: 'history', label: 'Last moderation actions' },
     ],
   },
@@ -116,6 +117,7 @@ export function logout() {
   state.puzzles = null;
   state.history = null;
   state.automaticActions = null;
+  state.similarPositionFlags = null;
   state.tournaments = null;
   state.featureUsage = null;
   state.liveLobby = null;

@@ -4,6 +4,7 @@ Moderation and admin tool for a PlayHex instance:
 
 - **Moderation**: review last chat messages, new accounts, avatars, submitted videos (accept/refuse), puzzles (put back as draft)
   and auto moderated players (restricted by the server for posting forbidden words in chat, can be canceled if false positive),
+  anti-cheat similar position flags (positions too similar to a playing game submitted to Hexplorer or a strong bot, with flagger IPs and when it happened between the flagged game moves),
   then take moderation action: warn player, block chat, block any content (avatar, puzzles, videos, tournaments...), ban IPs.
 - **Admin**: tournaments featuring, feature usage stats (how many players use pronouns, avatars, linked accounts, studies...),
   live lobby history (when live games are waiting for an opponent, how many are accepted or canceled, and after how long).

@@ -6,6 +6,7 @@ export const state = {
   puzzles: null,
   history: null,
   automaticActions: null,
+  similarPositionFlags: null,
   tournaments: null,
   featureUsage: null,
 

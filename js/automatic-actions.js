@@ -31,6 +31,7 @@ export async function renderAutomaticActions() {
     state.videos = null;
     state.puzzles = null;
     state.automaticActions = null;
+    state.similarPositionFlags = null;
     document.getElementById('automatic-actions-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadAutomaticActions();

@@ -27,6 +27,7 @@ export async function renderPuzzles() {
     state.videos = null;
     state.puzzles = null;
     state.automaticActions = null;
+    state.similarPositionFlags = null;
     document.getElementById('puzzles-body').innerHTML =
       '<div class="text-center py-5"><div class="spinner-border text-secondary"></div></div>';
     await loadPuzzles();

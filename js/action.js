@@ -106,7 +106,7 @@ function renderPastActions(actions) {
   }).join('');
 }
 
-function renderPlayerIps(playerIps) {
+export function renderPlayerIps(playerIps) {
   if (!playerIps.length) {
     return '<p class="text-muted small mb-0">No IPs recorded.</p>';
   }
