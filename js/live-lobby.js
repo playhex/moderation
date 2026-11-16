@@ -64,7 +64,7 @@ export async function renderLiveLobby() {
     <div id="live-lobby-body">${SPINNER}</div>
     <h5 class="mt-4">Chances to be joined within first minute</h5>
     <p class="small text-muted">
-      By week, average over the last 4 weeks, by 4 hours slots in local time, most recent on the right.
+      By week, by 4 hours slots in local time, most recent on the right.
       Kaplan-Meier estimation, like on the statistics page: canceled games only tell that host waited at least until cancel.
       Greener means easier to get joined, relatively to the whole table.
       In parentheses: less than ${JOIN_HISTORY_MIN_GAMES} games, not reliable.
@@ -82,8 +82,6 @@ export async function renderLiveLobby() {
 }
 
 const FIRST_MINUTE_MS = 60 * 1000;
-const WEEK_MS = 7 * 86400 * 1000;
-const JOIN_HISTORY_ROLLING_WEEKS = 4;
 const JOIN_HISTORY_SLOT_HOURS = 4;
 const JOIN_HISTORY_MIN_GAMES = 10;
 
@@ -160,13 +158,13 @@ function renderJoinHistory(games) {
   const slotsCount = 24 / JOIN_HISTORY_SLOT_HOURS;
   const rows = [];
 
-  // First row once we have enough weeks of data, last row is current week
+  // Skip first week, which is partial because history depth is limited by server. Last row is current week
   const firstWeek = mondayOf(games[0][0]);
-  firstWeek.setDate(firstWeek.getDate() + 7 * (JOIN_HISTORY_ROLLING_WEEKS - 1));
+  firstWeek.setDate(firstWeek.getDate() + 7);
 
   for (let week = mondayOf(Date.now()); week >= firstWeek; week = new Date(week.getFullYear(), week.getMonth(), week.getDate() - 7)) {
     const end = new Date(week.getFullYear(), week.getMonth(), week.getDate() + 7).getTime();
-    const start = new Date(week.getFullYear(), week.getMonth(), week.getDate() - 7 * (JOIN_HISTORY_ROLLING_WEEKS - 1)).getTime();
+    const start = week.getTime();
     const slots = Array.from({ length: slotsCount }, () => []);
     const all = [];
 
@@ -234,7 +232,7 @@ function renderJoinHistory(games) {
           ${columns.map(row => cell(row.global, `global ${biasedClass(row)}`)).join('')}
         </tr>
         <tr>
-          <th class="label-col text-muted fw-normal" title="Games over the ${JOIN_HISTORY_ROLLING_WEEKS} weeks">Games</th>
+          <th class="label-col text-muted fw-normal" title="Games created during the week">Games</th>
           ${columns.map(row => `<td class="text-muted n-cell ${biasedClass(row)}">${row.global.n}</td>`).join('')}
         </tr>
       </tbody>
